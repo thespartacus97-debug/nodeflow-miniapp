@@ -1,3 +1,10 @@
+const tg = window.Telegram?.WebApp;
+
+if (tg) {
+  tg.ready();
+  tg.expand();
+}
+
 export default function App() {
   return (
     <div style={{ padding: 16, fontFamily: "Inter, system-ui, Arial" }}>
