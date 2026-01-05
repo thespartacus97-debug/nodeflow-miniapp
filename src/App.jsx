@@ -1,149 +1,155 @@
 import { useEffect, useMemo, useState } from "react";
 
 const tg = window.Telegram?.WebApp;
-
 if (tg) {
   tg.ready();
   tg.expand();
 }
 
-function storageKey(userId) {
-  return `nodeflow:projects:${userId || "guest"}`;
+function key(userId, projectId) {
+  return `nodeflow:nodes:${userId || "guest"}:${projectId}`;
 }
 
 export default function App() {
   const user = tg?.initDataUnsafe?.user;
   const userId = user?.id;
 
-  const key = useMemo(() => storageKey(userId), [userId]);
-
   const [projects, setProjects] = useState([]);
   const [title, setTitle] = useState("");
+  const [currentProject, setCurrentProject] = useState(null);
+  const [nodes, setNodes] = useState([]);
+  const [nodeTitle, setNodeTitle] = useState("");
 
-  // загрузка проектов
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(key);
-      setProjects(raw ? JSON.parse(raw) : []);
-    } catch {
-      setProjects([]);
-    }
-  }, [key]);
+  const projectsKey = `nodeflow:projects:${userId || "guest"}`;
+  const nodesKey = useMemo(
+    () => currentProject && key(userId, currentProject.id),
+    [userId, currentProject]
+  );
 
-  // сохранение проектов
+  // load projects
   useEffect(() => {
-    try {
-      localStorage.setItem(key, JSON.stringify(projects));
-    } catch {
-      // ignore
-    }
-  }, [key, projects]);
+    const raw = localStorage.getItem(projectsKey);
+    setProjects(raw ? JSON.parse(raw) : []);
+  }, [projectsKey]);
+
+  // save projects
+  useEffect(() => {
+    localStorage.setItem(projectsKey, JSON.stringify(projects));
+  }, [projectsKey, projects]);
+
+  // load nodes
+  useEffect(() => {
+    if (!nodesKey) return;
+    const raw = localStorage.getItem(nodesKey);
+    setNodes(raw ? JSON.parse(raw) : []);
+  }, [nodesKey]);
+
+  // save nodes
+  useEffect(() => {
+    if (!nodesKey) return;
+    localStorage.setItem(nodesKey, JSON.stringify(nodes));
+  }, [nodesKey, nodes]);
 
   function createProject() {
-    const name = title.trim();
-    if (!name) return;
-
-    const newProject = {
-      id: crypto.randomUUID(),
-      title: name,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    };
-
-    setProjects((p) => [newProject, ...p]);
+    if (!title.trim()) return;
+    setProjects([
+      { id: crypto.randomUUID(), title: title.trim() },
+      ...projects,
+    ]);
     setTitle("");
   }
 
-  function deleteProject(id) {
-    setProjects((p) => p.filter((x) => x.id !== id));
+  function createNode() {
+    if (!nodeTitle.trim()) return;
+    setNodes([
+      {
+        id: crypto.randomUUID(),
+        title: nodeTitle.trim(),
+        status: "idea",
+      },
+      ...nodes,
+    ]);
+    setNodeTitle("");
   }
 
-  return (
-    <div style={{ padding: 16, fontFamily: "Arial, sans-serif" }}>
-      <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
-        <h1 style={{ margin: 0 }}>Nodeflow</h1>
-        <span style={{ opacity: 0.6, fontSize: 12 }}>
-          {user ? `@${user.username || "user"} • id ${user.id}` : "guest"}
-        </span>
-      </div>
+  // ================= UI =================
 
-      <div
-        style={{
-          marginTop: 14,
-          padding: 12,
-          border: "1px solid #ddd",
-          borderRadius: 12,
-        }}
-      >
-        <div style={{ fontWeight: 700, marginBottom: 8 }}>Projects</div>
+  // PROJECT LIST
+  if (!currentProject) {
+    return (
+      <div style={{ padding: 16, fontFamily: "Arial" }}>
+        <h1>Nodeflow</h1>
 
         <div style={{ display: "flex", gap: 8 }}>
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="New project name"
-            style={{
-              flex: 1,
-              padding: 10,
-              borderRadius: 10,
-              border: "1px solid #ccc",
-              outline: "none",
-            }}
+            placeholder="New project"
+            style={{ flex: 1, padding: 10 }}
           />
-          <button
-            onClick={createProject}
-            style={{
-              padding: "10px 12px",
-              borderRadius: 10,
-              border: "1px solid #ccc",
-              background: "white",
-              fontWeight: 700,
-            }}
-          >
-            + Add
-          </button>
+          <button onClick={createProject}>+ Add</button>
         </div>
 
-        {projects.length === 0 ? (
-          <div style={{ marginTop: 12, opacity: 0.65 }}>
-            No projects yet. Create your first one.
-          </div>
-        ) : (
-          <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
-            {projects.map((p) => (
-              <div
-                key={p.id}
-                style={{
-                  padding: 12,
-                  border: "1px solid #eee",
-                  borderRadius: 12,
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
-                <div>
-                  <div style={{ fontWeight: 700 }}>{p.title}</div>
-                  <div style={{ fontSize: 12, opacity: 0.6 }}>
-                    {new Date(p.createdAt).toLocaleString()}
-                  </div>
-                </div>
+        <div style={{ marginTop: 12 }}>
+          {projects.map((p) => (
+            <div
+              key={p.id}
+              onClick={() => setCurrentProject(p)}
+              style={{
+                padding: 12,
+                border: "1px solid #ddd",
+                marginBottom: 8,
+                borderRadius: 10,
+                cursor: "pointer",
+              }}
+            >
+              {p.title}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
-                <button
-                  onClick={() => deleteProject(p.id)}
-                  style={{
-                    padding: "8px 10px",
-                    borderRadius: 10,
-                    border: "1px solid #eee",
-                    background: "white",
-                  }}
-                >
-                  Delete
-                </button>
-              </div>
-            ))}
+  // PROJECT CANVAS
+  return (
+    <div style={{ padding: 16, fontFamily: "Arial" }}>
+      <button onClick={() => setCurrentProject(null)}>← Back</button>
+      <h2>{currentProject.title}</h2>
+
+      <div style={{ display: "flex", gap: 8 }}>
+        <input
+          value={nodeTitle}
+          onChange={(e) => setNodeTitle(e.target.value)}
+          placeholder="New node (idea / step)"
+          style={{ flex: 1, padding: 10 }}
+        />
+        <button onClick={createNode}>+ Node</button>
+      </div>
+
+      <div style={{ marginTop: 16 }}>
+        {nodes.length === 0 && (
+          <div style={{ opacity: 0.6 }}>
+            No nodes yet. Add your first idea.
           </div>
         )}
+
+        {nodes.map((n) => (
+          <div
+            key={n.id}
+            style={{
+              padding: 12,
+              border: "1px solid #eee",
+              borderRadius: 10,
+              marginBottom: 8,
+            }}
+          >
+            <b>{n.title}</b>
+            <div style={{ fontSize: 12, opacity: 0.6 }}>
+              status: {n.status}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
