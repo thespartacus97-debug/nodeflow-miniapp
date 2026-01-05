@@ -1,4 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
+import ReactFlow, {
+  Background,
+  Controls,
+  MiniMap,
+  addEdge,
+  applyEdgeChanges,
+  applyNodeChanges,
+} from "reactflow";
 
 const tg = window.Telegram?.WebApp;
 if (tg) {
@@ -6,150 +14,379 @@ if (tg) {
   tg.expand();
 }
 
-function key(userId, projectId) {
-  return `nodeflow:nodes:${userId || "guest"}:${projectId}`;
+function projectsStorageKey(userId) {
+  return `nodeflow:projects:${userId || "guest"}`;
+}
+function graphStorageKey(userId, projectId) {
+  return `nodeflow:graph:${userId || "guest"}:${projectId}`;
 }
 
 export default function App() {
   const user = tg?.initDataUnsafe?.user;
   const userId = user?.id;
 
+  // ---------- Projects ----------
   const [projects, setProjects] = useState([]);
-  const [title, setTitle] = useState("");
+  const [newProjectTitle, setNewProjectTitle] = useState("");
   const [currentProject, setCurrentProject] = useState(null);
-  const [nodes, setNodes] = useState([]);
-  const [nodeTitle, setNodeTitle] = useState("");
 
-  const projectsKey = `nodeflow:projects:${userId || "guest"}`;
-  const nodesKey = useMemo(
-    () => currentProject && key(userId, currentProject.id),
+  const pKey = useMemo(() => projectsStorageKey(userId), [userId]);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(pKey);
+      setProjects(raw ? JSON.parse(raw) : []);
+    } catch {
+      setProjects([]);
+    }
+  }, [pKey]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(pKey, JSON.stringify(projects));
+    } catch {
+      // ignore
+    }
+  }, [pKey, projects]);
+
+  function createProject() {
+    const name = newProjectTitle.trim();
+    if (!name) return;
+
+    const p = {
+      id: crypto.randomUUID(),
+      title: name,
+      createdAt: Date.now(),
+    };
+
+    setProjects((prev) => [p, ...prev]);
+    setNewProjectTitle("");
+  }
+
+  function deleteProject(projectId) {
+    setProjects((prev) => prev.filter((p) => p.id !== projectId));
+    // граф проекта можно не удалять (не критично), но можно и удалить:
+    try {
+      localStorage.removeItem(graphStorageKey(userId, projectId));
+    } catch {}
+    if (currentProject?.id === projectId) setCurrentProject(null);
+  }
+
+  // ---------- Graph (React Flow) ----------
+  const gKey = useMemo(
+    () => (currentProject ? graphStorageKey(userId, currentProject.id) : null),
     [userId, currentProject]
   );
 
-  // load projects
+  const [nodes, setNodes] = useState([]);
+  const [edges, setEdges] = useState([]);
+  const [selectedNodeId, setSelectedNodeId] = useState(null);
+
+  // load graph when project opens
   useEffect(() => {
-    const raw = localStorage.getItem(projectsKey);
-    setProjects(raw ? JSON.parse(raw) : []);
-  }, [projectsKey]);
+    if (!gKey) return;
+    try {
+      const raw = localStorage.getItem(gKey);
+      if (!raw) {
+        setNodes([]);
+        setEdges([]);
+        return;
+      }
+      const data = JSON.parse(raw);
+      setNodes(Array.isArray(data.nodes) ? data.nodes : []);
+      setEdges(Array.isArray(data.edges) ? data.edges : []);
+    } catch {
+      setNodes([]);
+      setEdges([]);
+    }
+    setSelectedNodeId(null);
+  }, [gKey]);
 
-  // save projects
+  // save graph
   useEffect(() => {
-    localStorage.setItem(projectsKey, JSON.stringify(projects));
-  }, [projectsKey, projects]);
+    if (!gKey) return;
+    try {
+      localStorage.setItem(gKey, JSON.stringify({ nodes, edges }));
+    } catch {
+      // ignore
+    }
+  }, [gKey, nodes, edges]);
 
-  // load nodes
-  useEffect(() => {
-    if (!nodesKey) return;
-    const raw = localStorage.getItem(nodesKey);
-    setNodes(raw ? JSON.parse(raw) : []);
-  }, [nodesKey]);
+  const onNodesChange = useCallback(
+    (changes) => setNodes((nds) => applyNodeChanges(changes, nds)),
+    []
+  );
 
-  // save nodes
-  useEffect(() => {
-    if (!nodesKey) return;
-    localStorage.setItem(nodesKey, JSON.stringify(nodes));
-  }, [nodesKey, nodes]);
+  const onEdgesChange = useCallback(
+    (changes) => setEdges((eds) => applyEdgeChanges(changes, eds)),
+    []
+  );
 
-  function createProject() {
-    if (!title.trim()) return;
-    setProjects([
-      { id: crypto.randomUUID(), title: title.trim() },
-      ...projects,
-    ]);
-    setTitle("");
-  }
+  const onConnect = useCallback(
+    (connection) => {
+      // connection: { source, target }
+      setEdges((eds) =>
+        addEdge(
+          {
+            ...connection,
+            id: crypto.randomUUID(),
+          },
+          eds
+        )
+      );
+    },
+    []
+  );
 
-  function createNode() {
-    if (!nodeTitle.trim()) return;
-    setNodes([
-      {
-        id: crypto.randomUUID(),
-        title: nodeTitle.trim(),
-        status: "idea",
+  function addNode() {
+    const id = crypto.randomUUID();
+    const newNode = {
+      id,
+      position: { x: 40, y: 40 },
+      data: {
+        title: "New step",
+        status: "idea", // idea | active | done
       },
-      ...nodes,
-    ]);
-    setNodeTitle("");
+      type: "default",
+    };
+    setNodes((prev) => [newNode, ...prev]);
+    setSelectedNodeId(id);
   }
 
-  // ================= UI =================
+  const selectedNode = useMemo(
+    () => nodes.find((n) => n.id === selectedNodeId) || null,
+    [nodes, selectedNodeId]
+  );
 
-  // PROJECT LIST
+  function updateSelectedNode(patch) {
+    if (!selectedNodeId) return;
+    setNodes((prev) =>
+      prev.map((n) => {
+        if (n.id !== selectedNodeId) return n;
+        return {
+          ...n,
+          data: {
+            ...n.data,
+            ...patch,
+          },
+        };
+      })
+    );
+  }
+
+  function deleteSelectedNode() {
+    if (!selectedNodeId) return;
+    const id = selectedNodeId;
+    setNodes((prev) => prev.filter((n) => n.id !== id));
+    setEdges((prev) => prev.filter((e) => e.source !== id && e.target !== id));
+    setSelectedNodeId(null);
+  }
+
+  // ---------- UI ----------
   if (!currentProject) {
     return (
-      <div style={{ padding: 16, fontFamily: "Arial" }}>
-        <h1>Nodeflow</h1>
-
-        <div style={{ display: "flex", gap: 8 }}>
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="New project"
-            style={{ flex: 1, padding: 10 }}
-          />
-          <button onClick={createProject}>+ Add</button>
+      <div style={{ padding: 16, fontFamily: "Arial, sans-serif" }}>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+          <h1 style={{ margin: 0 }}>Nodeflow</h1>
+          <span style={{ opacity: 0.6, fontSize: 12 }}>
+            {user ? `@${user.username || "user"} • id ${user.id}` : "guest"}
+          </span>
         </div>
 
-        <div style={{ marginTop: 12 }}>
+        <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
+          <input
+            value={newProjectTitle}
+            onChange={(e) => setNewProjectTitle(e.target.value)}
+            placeholder="New project name"
+            style={{
+              flex: 1,
+              padding: 10,
+              borderRadius: 10,
+              border: "1px solid #ccc",
+              outline: "none",
+            }}
+          />
+          <button
+            onClick={createProject}
+            style={{
+              padding: "10px 12px",
+              borderRadius: 10,
+              border: "1px solid #ccc",
+              background: "white",
+              fontWeight: 700,
+            }}
+          >
+            + Add
+          </button>
+        </div>
+
+        <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
           {projects.map((p) => (
             <div
               key={p.id}
-              onClick={() => setCurrentProject(p)}
               style={{
                 padding: 12,
-                border: "1px solid #ddd",
-                marginBottom: 8,
-                borderRadius: 10,
-                cursor: "pointer",
+                border: "1px solid #eee",
+                borderRadius: 12,
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
               }}
             >
-              {p.title}
+              <div
+                style={{ cursor: "pointer" }}
+                onClick={() => setCurrentProject(p)}
+              >
+                <div style={{ fontWeight: 700 }}>{p.title}</div>
+                <div style={{ fontSize: 12, opacity: 0.6 }}>
+                  {new Date(p.createdAt).toLocaleString()}
+                </div>
+              </div>
+
+              <button
+                onClick={() => deleteProject(p.id)}
+                style={{
+                  padding: "8px 10px",
+                  borderRadius: 10,
+                  border: "1px solid #eee",
+                  background: "white",
+                }}
+              >
+                Delete
+              </button>
             </div>
           ))}
         </div>
+
+        {projects.length === 0 && (
+          <div style={{ marginTop: 12, opacity: 0.65 }}>
+            No projects yet. Create your first one.
+          </div>
+        )}
       </div>
     );
   }
 
-  // PROJECT CANVAS
   return (
-    <div style={{ padding: 16, fontFamily: "Arial" }}>
-      <button onClick={() => setCurrentProject(null)}>← Back</button>
-      <h2>{currentProject.title}</h2>
-
-      <div style={{ display: "flex", gap: 8 }}>
-        <input
-          value={nodeTitle}
-          onChange={(e) => setNodeTitle(e.target.value)}
-          placeholder="New node (idea / step)"
-          style={{ flex: 1, padding: 10 }}
-        />
-        <button onClick={createNode}>+ Node</button>
-      </div>
-
-      <div style={{ marginTop: 16 }}>
-        {nodes.length === 0 && (
-          <div style={{ opacity: 0.6 }}>
-            No nodes yet. Add your first idea.
-          </div>
-        )}
-
-        {nodes.map((n) => (
-          <div
-            key={n.id}
+    <div style={{ height: "100vh", display: "flex", flexDirection: "column" }}>
+      {/* Top bar */}
+      <div
+        style={{
+          padding: 12,
+          borderBottom: "1px solid #eee",
+          fontFamily: "Arial, sans-serif",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 10,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <button
+            onClick={() => setCurrentProject(null)}
             style={{
-              padding: 12,
-              border: "1px solid #eee",
+              padding: "8px 10px",
               borderRadius: 10,
-              marginBottom: 8,
+              border: "1px solid #ddd",
+              background: "white",
             }}
           >
-            <b>{n.title}</b>
-            <div style={{ fontSize: 12, opacity: 0.6 }}>
-              status: {n.status}
+            ← Back
+          </button>
+          <div style={{ fontWeight: 800 }}>{currentProject.title}</div>
+        </div>
+
+        <button
+          onClick={addNode}
+          style={{
+            padding: "8px 10px",
+            borderRadius: 10,
+            border: "1px solid #ddd",
+            background: "white",
+            fontWeight: 800,
+          }}
+        >
+          + Node
+        </button>
+      </div>
+
+      {/* Canvas */}
+      <div style={{ flex: 1 }}>
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onConnect={onConnect}
+          onNodeClick={(_, node) => setSelectedNodeId(node.id)}
+          fitView
+        >
+          <Background />
+          <Controls />
+          <MiniMap />
+        </ReactFlow>
+      </div>
+
+      {/* Bottom sheet */}
+      <div
+        style={{
+          padding: 12,
+          borderTop: "1px solid #eee",
+          fontFamily: "Arial, sans-serif",
+          background: "white",
+        }}
+      >
+        {!selectedNode ? (
+          <div style={{ opacity: 0.65 }}>Tap a node to edit.</div>
+        ) : (
+          <div style={{ display: "grid", gap: 8 }}>
+            <div style={{ fontWeight: 800 }}>Node</div>
+
+            <input
+              value={selectedNode.data?.title || ""}
+              onChange={(e) => updateSelectedNode({ title: e.target.value })}
+              placeholder="Title"
+              style={{
+                padding: 10,
+                borderRadius: 10,
+                border: "1px solid #ccc",
+                outline: "none",
+              }}
+            />
+
+            <div style={{ display: "flex", gap: 8 }}>
+              {["idea", "active", "done"].map((s) => (
+                <button
+                  key={s}
+                  onClick={() => updateSelectedNode({ status: s })}
+                  style={{
+                    flex: 1,
+                    padding: "10px 8px",
+                    borderRadius: 10,
+                    border: "1px solid #ddd",
+                    background:
+                      selectedNode.data?.status === s ? "#f2f2f2" : "white",
+                    fontWeight: 800,
+                  }}
+                >
+                  {s}
+                </button>
+              ))}
             </div>
+
+            <button
+              onClick={deleteSelectedNode}
+              style={{
+                padding: "10px 8px",
+                borderRadius: 10,
+                border: "1px solid #eee",
+                background: "white",
+              }}
+            >
+              Delete node
+            </button>
           </div>
-        ))}
+        )}
       </div>
     </div>
   );
