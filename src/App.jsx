@@ -771,7 +771,8 @@ isValidConnection={(c) => c.source !== c.target}
     bottom: 90,
     zIndex: 10,
     display: "flex",
-    alignItems: "center",
+    alignItems: "flex-start",
+
     gap: 6,
     pointerEvents: "auto",
   }}
@@ -781,7 +782,8 @@ isValidConnection={(c) => c.source !== c.target}
     onClick={() => setShowControls((v) => !v)}
     style={{
       width: 16,
-      height: 96,
+      height: 132,
+
 
       borderRadius: 999,
       border: "1px solid rgba(183,183,183,0.18)",
@@ -802,6 +804,8 @@ isValidConnection={(c) => c.source !== c.target}
       style={{
         borderRadius: 14,
         overflow: "hidden",
+        height: 132,
+
         border: "1px solid rgba(183,183,183,0.18)",
         background: "rgba(23,23,23,0.92)",
       }}
@@ -824,25 +828,26 @@ isValidConnection={(c) => c.source !== c.target}
 >
   {/* Кнопка всегда видима */}
   <button
-    onClick={() => setShowMiniMap((v) => !v)}
-    style={{
-      position: "absolute",
-      right: 8,
-      top: 8,
-      width: 28,
-      height: 28,
-      borderRadius: 10,
-      border: "1px solid rgba(183,183,183,0.18)",
-      background: "rgba(23,23,23,0.92)",
-      color: "#FFFFFF",
-      fontWeight: 900,
-      lineHeight: "26px",
-      zIndex: 2,
-    }}
-    aria-label="Toggle minimap"
-  >
-    {showMiniMap ? "_" : "▢"}
-  </button>
+  onClick={() => setShowMiniMap((v) => !v)}
+  style={{
+    position: "absolute",
+    right: 8,
+    bottom: showMiniMap ? 74 : 8,
+    width: 28,
+    height: 28,
+    borderRadius: 10,
+    border: "1px solid rgba(183,183,183,0.18)",
+    background: "rgba(23,23,23,0.92)",
+    color: "#FFFFFF",
+    fontWeight: 900,
+    lineHeight: "26px",
+    zIndex: 9999,
+  }}
+  aria-label="Toggle minimap"
+>
+  {showMiniMap ? "_" : "▢"}
+</button>
+
 
   {/* Контейнер миникарты (когда скрыта — остаётся маленькая плашка-держатель) */}
   <div
