@@ -772,6 +772,8 @@ isValidConnection={(c) => c.source !== c.target}
     zIndex: 10,
     display: "flex",
     alignItems: "center",
+    height: 132,
+
 
     gap: 6,
     pointerEvents: "auto",
@@ -854,7 +856,9 @@ isValidConnection={(c) => c.source !== c.target}
   <div
     style={{
       width: showMiniMap ? 150 : 54,
-      padding: 0,
+      padding: showMiniMap ? 1 : 0,
+      backgroundClip: "padding-box",
+
       boxSizing: "border-box",
 
       height: showMiniMap ? 110 : 44,
@@ -870,8 +874,9 @@ isValidConnection={(c) => c.source !== c.target}
     {showMiniMap && (
       <MiniMap
         style={{
-  width: "calc(100% + 1px)",
-    height: "calc(100% + 1px)",
+  width: "100%",
+  height: "100%",
+
 
   display: "block",
   backgroundColor: "rgba(23,23,23,0.92)",
