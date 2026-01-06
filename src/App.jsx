@@ -355,6 +355,18 @@ useEffect(() => {
       })
     );
   }
+function deleteSelectedNode() {
+  if (!selectedNodeId) return;
+
+  setNodes((prev) => prev.filter((n) => n.id !== selectedNodeId));
+  setEdges((prev) =>
+    prev.filter(
+      (e) => e.source !== selectedNodeId && e.target !== selectedNodeId
+    )
+  );
+
+  setSelectedNodeId(null);
+}
 
   function deleteSelectedEdge() {
   if (!selectedEdgeId) return;
