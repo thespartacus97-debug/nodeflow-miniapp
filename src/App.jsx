@@ -771,7 +771,7 @@ isValidConnection={(c) => c.source !== c.target}
     bottom: 90,
     zIndex: 10,
     display: "flex",
-    alignItems: "flex-start",
+    alignItems: "center",
 
     gap: 6,
     pointerEvents: "auto",
@@ -781,13 +781,12 @@ isValidConnection={(c) => c.source !== c.target}
   <button
     onClick={() => setShowControls((v) => !v)}
     style={{
-      width: 16,
-      height: 132,
-
-
-      borderRadius: 999,
+      wwidth: 14,
+      height: 34,
+      borderRadius: 10,
+      opacity: 0.9,
       border: "1px solid rgba(183,183,183,0.18)",
-      background: "rgba(23,23,23,0.92)",
+      background: "transparent",
       color: "rgba(255,255,255,0.75)",
       fontWeight: 900,
       display: "flex",
@@ -796,7 +795,8 @@ isValidConnection={(c) => c.source !== c.target}
     }}
     aria-label="Toggle controls"
   >
-    {showControls ? "‹" : "›"}
+    {showControls ? "❮" : "❯"}
+
   </button>
 
   {showControls && (
@@ -806,7 +806,8 @@ isValidConnection={(c) => c.source !== c.target}
         overflow: "hidden",
         height: 132,
 
-        border: "1px solid rgba(183,183,183,0.18)",
+        border: "none",
+
         background: "rgba(23,23,23,0.92)",
       }}
     >
@@ -853,6 +854,9 @@ isValidConnection={(c) => c.source !== c.target}
   <div
     style={{
       width: showMiniMap ? 150 : 54,
+      padding: 0,
+      boxSizing: "border-box",
+
       height: showMiniMap ? 110 : 44,
       borderRadius: 14,
       overflow: "hidden",
@@ -866,10 +870,13 @@ isValidConnection={(c) => c.source !== c.target}
     {showMiniMap && (
       <MiniMap
         style={{
-          width: 150,
-          height: 110,
-          backgroundColor: "rgba(23,23,23,0.92)",
-        }}
+  width: "calc(100% + 1px)",
+    height: "calc(100% + 1px)",
+
+  display: "block",
+  backgroundColor: "rgba(23,23,23,0.92)",
+}}
+ 
         maskColor="rgba(15,15,16,0.55)"
         nodeColor={(n) => {
           if (n.selected) return "#6F42FF";
