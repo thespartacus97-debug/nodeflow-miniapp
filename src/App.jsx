@@ -6,7 +6,10 @@ import ReactFlow, {
   addEdge,
   applyEdgeChanges,
   applyNodeChanges,
+  Handle,
+  Position,
 } from "reactflow";
+
 
 const tg = window.Telegram?.WebApp;
 if (tg) {
@@ -45,12 +48,16 @@ function NodeCard({ data, selected }) {
   const statusLabel =
     status === "done" ? "done" : status === "active" ? "active" : "idea";
 
-  const statusChipBg =
-    status === "done"
-      ? "rgba(255,255,255,0.10)"
-      : status === "active"
-      ? "rgba(255,255,255,0.10)"
-      : "rgba(255,255,255,0.08)";
+  const statusChipBg = "rgba(255,255,255,0.10)";
+
+  // маленькие аккуратные точки для соединений
+  const handleStyle = {
+    width: 10,
+    height: 10,
+    borderRadius: 999,
+    border: "1px solid rgba(255,255,255,0.18)",
+    background: "#0F0F10",
+  };
 
   return (
     <div
@@ -61,8 +68,15 @@ function NodeCard({ data, selected }) {
         borderRadius: 14,
         background: bg,
         border: `1px solid ${border}`,
+        position: "relative",
       }}
     >
+      {/* TARGET: входящая связь (слева) */}
+      <Handle type="target" position={Position.Left} style={handleStyle} />
+
+      {/* SOURCE: исходящая связь (справа) */}
+      <Handle type="source" position={Position.Right} style={handleStyle} />
+
       <div style={{ fontWeight: 800, color: titleColor, fontSize: 14 }}>
         {title}
       </div>
@@ -91,6 +105,7 @@ function NodeCard({ data, selected }) {
     </div>
   );
 }
+
 
 export default function App() {
   const user = tg?.initDataUnsafe?.user;
