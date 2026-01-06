@@ -8,7 +8,10 @@ import ReactFlow, {
   applyNodeChanges,
   Handle,
   Position,
+  ConnectionMode,
 } from "reactflow";
+
+
 
 
 const tg = window.Telegram?.WebApp;
@@ -50,28 +53,29 @@ function NodeCard({ data, selected, linkMode }) {
 
   const statusChipBg = "rgba(255,255,255,0.10)";
 
-  // Маленькая видимая точка
+  // Видимая точка
   const dotStyle = {
     width: 10,
     height: 10,
     borderRadius: 999,
     background: linkMode ? "#6F42FF" : "rgba(255,255,255,0.25)",
-    border: linkMode ? "1px solid rgba(111,66,255,0.9)" : "1px solid rgba(255,255,255,0.22)",
+    border: linkMode
+      ? "1px solid rgba(111,66,255,0.9)"
+      : "1px solid rgba(255,255,255,0.22)",
     boxShadow: linkMode ? "0 0 0 6px rgba(111,66,255,0.18)" : "none",
   };
 
-  // Большая зона касания (невидимая), но с подсветкой в Link mode
-  const handleStyle = {
-  width: 32,
-  height: 32,
-  borderRadius: 999,
-  background: "transparent",
-  border: "none",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-};
-
+  // Большая зона касания для источников (куда нажимать пальцем)
+  const bigHandleStyle = {
+    width: 34,
+    height: 34,
+    borderRadius: 999,
+    background: "transparent",
+    border: "none",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  };
 
   return (
     <div
@@ -85,25 +89,62 @@ function NodeCard({ data, selected, linkMode }) {
         position: "relative",
       }}
     >
-      {/* TARGET: входящая связь (слева) */}
+      {/* ✅ Невидимый "приёмник" на ВСЮ ноду — теперь можно тянуть к любой части ноды */}
+      {linkMode && (
+        <Handle
+          type="target"
+          position={Position.Left}
+          id="target-all"
+          style={{
+            position: "absolute",
+            left: 0,
+            top: 0,
+            width: "100%",
+            height: "100%",
+            borderRadius: 14,
+            opacity: 0,
+            border: "none",
+            background: "transparent",
+          }}
+        />
+      )}
+
+      {/* ==== 4 источника: Left / Right / Top / Bottom ==== */}
       <Handle
-  type="target"
-  position={Position.Left}
-  style={{ ...handleStyle, left: -16 }}
->
-  <div style={dotStyle} />
-</Handle>
+        type="source"
+        position={Position.Left}
+        id="s-left"
+        style={{ ...bigHandleStyle, left: -17 }}
+      >
+        <div style={dotStyle} />
+      </Handle>
 
-
-      {/* SOURCE: исходящая связь (справа) */}
       <Handle
-  type="source"
-  position={Position.Right}
-  style={{ ...handleStyle, right: -16 }}
->
-  <div style={dotStyle} />
-</Handle>
+        type="source"
+        position={Position.Right}
+        id="s-right"
+        style={{ ...bigHandleStyle, right: -17 }}
+      >
+        <div style={dotStyle} />
+      </Handle>
 
+      <Handle
+        type="source"
+        position={Position.Top}
+        id="s-top"
+        style={{ ...bigHandleStyle, top: -17 }}
+      >
+        <div style={dotStyle} />
+      </Handle>
+
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        id="s-bottom"
+        style={{ ...bigHandleStyle, bottom: -17 }}
+      >
+        <div style={dotStyle} />
+      </Handle>
 
       <div style={{ fontWeight: 800, color: titleColor, fontSize: 14 }}>
         {title}
@@ -133,6 +174,7 @@ function NodeCard({ data, selected, linkMode }) {
     </div>
   );
 }
+
 
 
 import React from "react";
@@ -575,7 +617,9 @@ function deleteSelectedNode() {
   panOnScroll={!linkMode}
   nodesConnectable={linkMode}
   nodesDraggable={!linkMode}
-  connectionRadius={40}
+  connectionRadius={90}
+connectionMode={ConnectionMode.Loose}
+
   deleteKeyCode={null}
   multiSelectionKeyCode={null}
   selectionKeyCode={null}
