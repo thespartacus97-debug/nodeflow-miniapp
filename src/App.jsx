@@ -354,6 +354,8 @@ function App() {
   const [selectedNodeId, setSelectedNodeId] = useState(null);
   const [selectedEdgeId, setSelectedEdgeId] = useState(null);
   const [linkMode, setLinkMode] = useState(false);
+  const [showMiniMap, setShowMiniMap] = useState(true);
+
   function nearestTargetHandle({ sourceHandle }) {
   // Стараемся приходить "симметрично": справа -> слева, сверху -> сверху и т.д.
   // Можно поменять логику позже, но это даст ровные дуги точка-в-точку.
@@ -709,13 +711,15 @@ function deleteSelectedNode() {
   style={{
     flex: 1,
     background: "#0F0F10",
-    touchAction: "none", // ✅ жесты (pinch/pan) уходят в ReactFlow, а не в page zoom
+    touchAction: "none",
+    position: "relative",
   }}
 >
 
+
         <ReactFlow
   nodes={nodes}
-  nodeTypes={nodeTypes}
+  nodeTypes={nodeTypes} 
   edgeTypes={edgeTypes}
 defaultEdgeOptions={{ type: "nf" }}
 preventScrolling={true}
@@ -758,7 +762,66 @@ isValidConnection={(c) => c.source !== c.target}
         >
           <Background />
           <Controls />
-          <MiniMap />
+          {/* MiniMap + Toggle */}
+<div
+  style={{
+    position: "absolute",
+    right: 12,
+    bottom: 12,
+    zIndex: 10,
+    display: "flex",
+    alignItems: "flex-end",
+    gap: 8,
+    pointerEvents: "auto",
+  }}
+>
+  <button
+    onClick={() => setShowMiniMap((v) => !v)}
+    style={{
+      height: 36,
+      padding: "0 12px",
+      borderRadius: 12,
+      border: "1px solid rgba(183,183,183,0.22)", // #B7B7B7
+      background: "rgba(23,23,23,0.92)", // #171717
+      color: "#FFFFFF",
+      fontWeight: 800,
+    }}
+  >
+    {showMiniMap ? "Hide map" : "Show map"}
+  </button>
+
+  {showMiniMap && (
+    <div
+      style={{
+        borderRadius: 14,
+        overflow: "hidden",
+        border: "1px solid rgba(183,183,183,0.18)",
+        background: "rgba(23,23,23,0.92)",
+        boxShadow: "0 10px 30px rgba(0,0,0,0.35)",
+      }}
+    >
+      <MiniMap
+        style={{
+          width: 150,
+          height: 110,
+          backgroundColor: "rgba(23,23,23,0.92)", // #171717
+        }}
+        maskColor="rgba(15,15,16,0.55)" // мягкая маска
+        nodeColor={(n) => {
+          // палитра: selected -> #6F42FF, active -> #00C2FF, остальное -> #B7B7B7
+          if (n.selected) return "#6F42FF";
+          const st = n?.data?.status;
+          if (st === "active") return "#00C2FF";
+          if (st === "done") return "rgba(183,183,183,0.55)";
+          return "rgba(183,183,183,0.85)";
+        }}
+        nodeStrokeColor={(n) => (n.selected ? "#6F42FF" : "rgba(255,255,255,0.10)")}
+        nodeStrokeWidth={2}
+      />
+    </div>
+  )}
+</div>
+
         </ReactFlow>
       </div>
 
