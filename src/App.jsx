@@ -153,44 +153,82 @@ function NodeCard({ data, selected, linkMode }) {
         }}
       />
 
-      {/* ==== 4 источника (существуют ВСЕГДА для корректного рендера линий) ==== */}
-      <Handle
-        type="source"
-        position={Position.Left}
-        id="s-left"
-        style={{ ...baseHandle, left: -17 }}
-      >
-        <div style={dotStyle} />
-      </Handle>
+      {/* ==== 4 target-точки (куда приходит связь) ==== */}
+<Handle
+  type="target"
+  position={Position.Left}
+  id="t-left"
+  style={{ ...baseHandle, left: -17 }}
+>
+  <div style={dotStyle} />
+</Handle>
 
-      <Handle
-        type="source"
-        position={Position.Right}
-        id="s-right"
-        style={{ ...baseHandle, right: -17 }}
-      >
-        <div style={dotStyle} />
-      </Handle>
+<Handle
+  type="target"
+  position={Position.Right}
+  id="t-right"
+  style={{ ...baseHandle, right: -17 }}
+>
+  <div style={dotStyle} />
+</Handle>
 
-      <Handle
-        type="source"
-        position={Position.Top}
-        id="s-top"
-        style={{ ...baseHandle, top: -17 }}
-      >
-        <div style={dotStyle} />
-      </Handle>
+<Handle
+  type="target"
+  position={Position.Top}
+  id="t-top"
+  style={{ ...baseHandle, top: -17 }}
+>
+  <div style={dotStyle} />
+</Handle>
 
-      <Handle
-        type="source"
-        position={Position.Bottom}
-        id="s-bottom"
-        style={{ ...baseHandle, bottom: -17 }}
-      >
-        <div style={dotStyle} />
-      </Handle>
+<Handle
+  type="target"
+  position={Position.Bottom}
+  id="t-bottom"
+  style={{ ...baseHandle, bottom: -17 }}
+>
+  <div style={dotStyle} />
+</Handle>
 
-      <div style={{ fontWeight: 800, color: titleColor, fontSize: 14 }}>
+{/* ==== 4 источника (откуда тянем связь) ==== */}
+<Handle
+  type="source"
+  position={Position.Left}
+  id="s-left"
+  style={{ ...baseHandle, left: -17 }}
+>
+  <div style={dotStyle} />
+</Handle>
+
+<Handle
+  type="source"
+  position={Position.Right}
+  id="s-right"
+  style={{ ...baseHandle, right: -17 }}
+>
+  <div style={dotStyle} />
+</Handle>
+
+<Handle
+  type="source"
+  position={Position.Top}
+  id="s-top"
+  style={{ ...baseHandle, top: -17 }}
+>
+  <div style={dotStyle} />
+</Handle>
+
+<Handle
+  type="source"
+  position={Position.Bottom}
+  id="s-bottom"
+  style={{ ...baseHandle, bottom: -17 }}
+>
+  <div style={dotStyle} />
+</Handle>
+
+<div style={{ fontWeight: 800, color: titleColor, fontSize: 14 }}>
+
         {title}
       </div>
 
@@ -316,6 +354,16 @@ function App() {
   const [selectedNodeId, setSelectedNodeId] = useState(null);
   const [selectedEdgeId, setSelectedEdgeId] = useState(null);
   const [linkMode, setLinkMode] = useState(false);
+  function nearestTargetHandle({ sourceHandle }) {
+  // Стараемся приходить "симметрично": справа -> слева, сверху -> сверху и т.д.
+  // Можно поменять логику позже, но это даст ровные дуги точка-в-точку.
+  if (sourceHandle === "s-right") return "t-left";
+  if (sourceHandle === "s-left") return "t-right";
+  if (sourceHandle === "s-top") return "t-bottom";
+  if (sourceHandle === "s-bottom") return "t-top";
+  return "t-left";
+}
+
   const nodeTypes = useMemo(() =>  ({
   card: (props) => <NodeCard {...props} linkMode={linkMode} />,
 }), [linkMode]);
@@ -390,12 +438,20 @@ useEffect(() => {
     []
   );
 
-  const onConnect = useCallback(
+ const onConnect = useCallback(
   (connection) => {
     if (!linkMode) return;
 
     // ❌ запрет соединения ноды с самой собой
     if (connection.source === connection.target) return;
+
+    const sourceHandle = connection.sourceHandle || "s-right";
+
+    // если targetHandle не задан или равен "target-all" — подменяем на нормальный
+    const targetHandle =
+      !connection.targetHandle || connection.targetHandle === "target-all"
+        ? nearestTargetHandle({ sourceHandle })
+        : connection.targetHandle;
 
     setEdges((eds) =>
       addEdge(
@@ -403,6 +459,8 @@ useEffect(() => {
           ...connection,
           id: crypto.randomUUID(),
           type: "nf",
+          sourceHandle,
+          targetHandle,
         },
         eds
       )
@@ -410,6 +468,7 @@ useEffect(() => {
   },
   [linkMode]
 );
+
 
 
 
