@@ -9,6 +9,8 @@ import ReactFlow, {
   Handle,
   Position,
   ConnectionMode,
+  BaseEdge,
+  getBezierPath,
 } from "reactflow";
 
 
@@ -39,6 +41,49 @@ function projectsStorageKey(userId) {
 function graphStorageKey(userId, projectId) {
   return `nodeflow:graph:${userId || "guest"}:${projectId}`;
 }
+function NodeflowEdge(props) {
+  const {
+    sourceX,
+    sourceY,
+    targetX,
+    targetY,
+    sourcePosition,
+    targetPosition,
+    markerEnd,
+    selected,
+  } = props;
+
+  const [path] = getBezierPath({
+    sourceX,
+    sourceY,
+    sourcePosition,
+    targetX,
+    targetY,
+    targetPosition,
+  });
+
+  // Широкая "невидимая" зона нажатия для пальца
+  return (
+    <>
+      <path
+        d={path}
+        fill="none"
+        stroke="transparent"
+        strokeWidth={28}
+        className="react-flow__edge-interaction"
+      />
+      <BaseEdge
+        path={path}
+        markerEnd={markerEnd}
+        style={{
+          stroke: selected ? "#6F42FF" : "rgba(255,255,255,0.35)",
+          strokeWidth: 2,
+        }}
+      />
+    </>
+  );
+}
+
 function NodeCard({ data, selected, linkMode }) {
   const status = data?.status || "idea";
   const title = data?.title || "Untitled";
@@ -271,9 +316,10 @@ function App() {
   const [selectedNodeId, setSelectedNodeId] = useState(null);
   const [selectedEdgeId, setSelectedEdgeId] = useState(null);
   const [linkMode, setLinkMode] = useState(false);
-  const nodeTypes = useMemo(() => ({
+  const nodeTypes = useMemo(() =>  ({
   card: (props) => <NodeCard {...props} linkMode={linkMode} />,
 }), [linkMode]);
+const edgeTypes = useMemo(() => ({ nf: NodeflowEdge }), []);
 
 
   // load graph when project opens (with sanitizing)
@@ -308,9 +354,9 @@ useEffect(() => {
       };
     });
 
-    const safeEdges = (Array.isArray(data.edges) ? data.edges : []).filter(
-      (e) => e && e.id && e.source && e.target
-    );
+    const safeEdges = (Array.isArray(data.edges) ? data.edges : [])
+  .filter((e) => e && e.id && e.source && e.target)
+  .map((e) => ({ ...e, type: "nf" }));
 
     setNodes(safeNodes);
     setEdges(safeEdges);
@@ -346,12 +392,17 @@ useEffect(() => {
 
   const onConnect = useCallback(
   (connection) => {
-    if (!linkMode) return; // 🔒 only in Link mode
+    if (!linkMode) return;
+
+    // ❌ запрет соединения ноды с самой собой
+    if (connection.source === connection.target) return;
+
     setEdges((eds) =>
       addEdge(
         {
           ...connection,
           id: crypto.randomUUID(),
+          type: "nf",
         },
         eds
       )
@@ -359,6 +410,7 @@ useEffect(() => {
   },
   [linkMode]
 );
+
 
 
   function addNode() {
@@ -598,6 +650,9 @@ function deleteSelectedNode() {
         <ReactFlow
   nodes={nodes}
   nodeTypes={nodeTypes}
+  edgeTypes={edgeTypes}
+defaultEdgeOptions={{ type: "nf" }}
+
   edges={edges}
   onNodesChange={onNodesChange}
   onEdgesChange={onEdgesChange}
@@ -619,6 +674,8 @@ function deleteSelectedNode() {
   nodesDraggable={!linkMode}
   connectionRadius={90}
 connectionMode={ConnectionMode.Loose}
+isValidConnection={(c) => c.source !== c.target}
+
 
   deleteKeyCode={null}
   multiSelectionKeyCode={null}
