@@ -33,6 +33,64 @@ function projectsStorageKey(userId) {
 function graphStorageKey(userId, projectId) {
   return `nodeflow:graph:${userId || "guest"}:${projectId}`;
 }
+function NodeCard({ data, selected }) {
+  const status = data?.status || "idea";
+  const title = data?.title || "Untitled";
+
+  const bg = "#151517";
+  const border = selected ? "#6F42FF" : "rgba(255,255,255,0.10)";
+  const titleColor = "#FFFFFF";
+  const metaColor = "rgba(255,255,255,0.65)";
+
+  const statusLabel =
+    status === "done" ? "done" : status === "active" ? "active" : "idea";
+
+  const statusChipBg =
+    status === "done"
+      ? "rgba(255,255,255,0.10)"
+      : status === "active"
+      ? "rgba(255,255,255,0.10)"
+      : "rgba(255,255,255,0.08)";
+
+  return (
+    <div
+      style={{
+        minWidth: 170,
+        maxWidth: 220,
+        padding: 12,
+        borderRadius: 14,
+        background: bg,
+        border: `1px solid ${border}`,
+      }}
+    >
+      <div style={{ fontWeight: 800, color: titleColor, fontSize: 14 }}>
+        {title}
+      </div>
+
+      <div style={{ marginTop: 8, display: "flex", gap: 8, alignItems: "center" }}>
+        <div
+          style={{
+            padding: "4px 8px",
+            borderRadius: 999,
+            background: statusChipBg,
+            border: "1px solid rgba(255,255,255,0.10)",
+            color: metaColor,
+            fontSize: 12,
+            fontWeight: 700,
+          }}
+        >
+          {statusLabel}
+        </div>
+
+        {selected && (
+          <div style={{ color: "#6F42FF", fontSize: 12, fontWeight: 800 }}>
+            selected
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function App() {
   const user = tg?.initDataUnsafe?.user;
@@ -94,6 +152,7 @@ export default function App() {
   const [nodes, setNodes] = useState([]);
   const [edges, setEdges] = useState([]);
   const [selectedNodeId, setSelectedNodeId] = useState(null);
+  const nodeTypes = useMemo(() => ({ card: NodeCard }), []);
 
   // load graph when project opens
   useEffect(() => {
@@ -160,7 +219,8 @@ export default function App() {
         title: "New step",
         status: "idea", // idea | active | done
       },
-      type: "default",
+      type: "card",
+
     };
     setNodes((prev) => [newNode, ...prev]);
     setSelectedNodeId(id);
@@ -195,17 +255,18 @@ export default function App() {
     setSelectedNodeId(null);
   }
 
-  // ---------- UI ----------
-  if (!currentProject) 
-  return (
-    <div
-      style={{
-        padding: 16,
-        fontFamily: "Arial, sans-serif",
-        background: "#0F0F10",
-        minHeight: "100dvh",
-        color: "#FFFFFF",
-      }}>
+    // ---------- UI ----------
+  if (!currentProject) {
+    return (
+      <div
+        style={{
+          padding: 16,
+          fontFamily: "Arial, sans-serif",
+          background: "#0F0F10",
+          minHeight: "100dvh",
+          color: "#FFFFFF",
+        }}
+      >
         <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
           <h1 style={{ margin: 0 }}>Nodeflow</h1>
           <span style={{ opacity: 0.6, fontSize: 12 }}>
@@ -214,93 +275,223 @@ export default function App() {
         </div>
 
         <div
-  style={{
-    marginTop: 16,
-    display: "flex",
-    gap: 8,
-  }}
->
-  <input
-  value={newProjectTitle}
-  onChange={(e) => setNewProjectTitle(e.target.value)}
-  placeholder="New project name"
-  style={{
-    flex: 1,
-    height: 44,
-    padding: "0 14px",
-    borderRadius: 12,
-    border: "1px solid rgba(255,255,255,0.12)",
-    background: "#151517",
-    color: "#FFFFFF",
-    outline: "none",
-  }}
-/>
-<button
-  onClick={createProject}
-  style={{
-    height: 44,
-    padding: "0 16px",
-    borderRadius: 12,
-    border: "1px solid rgba(255,255,255,0.12)",
-    background: "#6F42FF",
-    color: "#FFFFFF",
-    fontWeight: 700,
-  }}
->
-  + Add
-</button>
-</div>
-
-<div style={{ marginTop: 12, display: "grid", gap: 10 }}>
-  {projects.map((p) => (
-    <div
-      key={p.id}
-      style={{
-        padding: 14,
-        borderRadius: 14,
-        border: "1px solid rgba(255,255,255,0.10)",
-        background: "#151517",
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-      }}
-    >
-      <div style={{ cursor: "pointer" }} onClick={() => setCurrentProject(p)}>
-        <div style={{ fontWeight: 700 }}>{p.title}</div>
-        <div
           style={{
-            fontSize: 12,
-            marginTop: 4,
-            opacity: 0.6,
+            marginTop: 16,
+            display: "flex",
+            gap: 8,
           }}
         >
-          {new Date(p.createdAt).toLocaleString()}
+          <input
+            value={newProjectTitle}
+            onChange={(e) => setNewProjectTitle(e.target.value)}
+            placeholder="New project name"
+            style={{
+              flex: 1,
+              height: 44,
+              padding: "0 14px",
+              borderRadius: 12,
+              border: "1px solid rgba(255,255,255,0.12)",
+              background: "#151517",
+              color: "#FFFFFF",
+              outline: "none",
+            }}
+          />
+          <button
+            onClick={createProject}
+            style={{
+              height: 44,
+              padding: "0 16px",
+              borderRadius: 12,
+              border: "1px solid rgba(255,255,255,0.12)",
+              background: "#6F42FF",
+              color: "#FFFFFF",
+              fontWeight: 700,
+            }}
+          >
+            + Add
+          </button>
+        </div>
+
+        <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
+          {projects.map((p) => (
+            <div
+              key={p.id}
+              style={{
+                padding: 14,
+                borderRadius: 14,
+                border: "1px solid rgba(255,255,255,0.10)",
+                background: "#151517",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <div style={{ cursor: "pointer" }} onClick={() => setCurrentProject(p)}>
+                <div style={{ fontWeight: 700 }}>{p.title}</div>
+                <div style={{ fontSize: 12, marginTop: 4, opacity: 0.6 }}>
+                  {new Date(p.createdAt).toLocaleString()}
+                </div>
+              </div>
+
+              <button
+                onClick={() => deleteProject(p.id)}
+                style={{
+                  height: 32,
+                  padding: "0 12px",
+                  borderRadius: 10,
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  background: "transparent",
+                  color: "rgba(255,255,255,0.7)",
+                }}
+              >
+                Delete
+              </button>
+            </div>
+          ))}
+
+          {projects.length === 0 && (
+            <div style={{ marginTop: 6, opacity: 0.65 }}>
+              Create your first project to start thinking in flows.
+            </div>
+          )}
         </div>
       </div>
+    );
+  }
 
-      <button
-        onClick={() => deleteProject(p.id)}
+  // ===== Project Canvas (React Flow) =====
+  return (
+    <div style={{ height: "100dvh", display: "flex", flexDirection: "column" }}>
+      {/* Top bar */}
+      <div
         style={{
-          height: 32,
-          padding: "0 12px",
-          borderRadius: 10,
-          border: "1px solid rgba(255,255,255,0.12)",
-          background: "transparent",
-          color: "rgba(255,255,255,0.7)",
+          padding: 12,
+          borderBottom: `1px solid ${theme.border}`,
+          fontFamily: "Arial, sans-serif",
+          background: "#0F0F10",
+          color: "#FFFFFF",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 10,
         }}
       >
-        Delete
-      </button>
-    </div>
-  ))}
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <button
+            onClick={() => setCurrentProject(null)}
+            style={{
+              padding: "8px 10px",
+              borderRadius: 10,
+              border: "1px solid rgba(255,255,255,0.12)",
+              background: "#151517",
+              color: "#FFFFFF",
+            }}
+          >
+            ← Back
+          </button>
+          <div style={{ fontWeight: 800 }}>{currentProject.title}</div>
+        </div>
 
-  {projects.length === 0 && (
-    <div style={{ marginTop: 6, opacity: 0.65 }}>
-      Create your first project to start thinking in flows.
+        <button
+          onClick={addNode}
+          style={{
+            padding: "8px 10px",
+            borderRadius: 10,
+            border: "1px solid rgba(255,255,255,0.12)",
+            background: "#6F42FF",
+            color: "#FFFFFF",
+            fontWeight: 800,
+          }}
+        >
+          + Node
+        </button>
+      </div>
+
+      {/* Canvas */}
+      <div style={{ flex: 1, background: "#0F0F10" }}>
+        <ReactFlow
+          nodes={nodes}
+          nodeTypes={nodeTypes}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onConnect={onConnect}
+          onNodeClick={(_, node) => setSelectedNodeId(node.id)}
+          fitView
+          style={{ background: "#0F0F10" }}
+        >
+          <Background />
+          <Controls />
+          <MiniMap />
+        </ReactFlow>
+      </div>
+
+      {/* Bottom sheet */}
+      <div
+        style={{
+          padding: 12,
+          borderTop: `1px solid ${theme.border}`,
+          fontFamily: "Arial, sans-serif",
+          background: "#111111",
+          color: "#FFFFFF",
+        }}
+      >
+        {!selectedNode ? (
+          <div style={{ opacity: 0.65 }}>Tap a node to edit.</div>
+        ) : (
+          <div style={{ display: "grid", gap: 8 }}>
+            <div style={{ fontWeight: 800 }}>Node</div>
+
+            <input
+              value={selectedNode.data?.title || ""}
+              onChange={(e) => updateSelectedNode({ title: e.target.value })}
+              placeholder="Title"
+              style={{
+                padding: 10,
+                borderRadius: 10,
+                border: "1px solid rgba(255,255,255,0.12)",
+                outline: "none",
+                background: "#FFFFFF",
+                color: "#111111",
+              }}
+            />
+
+            <div style={{ display: "flex", gap: 8 }}>
+              {["idea", "active", "done"].map((s) => (
+                <button
+                  key={s}
+                  onClick={() => updateSelectedNode({ status: s })}
+                  style={{
+                    flex: 1,
+                    padding: "10px 8px",
+                    borderRadius: 10,
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    background:
+                      selectedNode.data?.status === s ? "#232326" : "#151517",
+                    color: "#FFFFFF",
+                    fontWeight: 800,
+                  }}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+
+            <button
+              onClick={deleteSelectedNode}
+              style={{
+                padding: "10px 8px",
+                borderRadius: 10,
+                border: "1px solid rgba(255,255,255,0.12)",
+                background: "#151517",
+                color: "#FFFFFF",
+              }}
+            >
+              Delete node
+            </button>
+          </div>
+        )}
+      </div>
     </div>
-  )}
-</div>
-</div>
   );
 }
-
