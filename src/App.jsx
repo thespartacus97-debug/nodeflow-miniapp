@@ -690,6 +690,7 @@ function deleteSelectedNode() {
   >
     Link
   </button>
+<span style={{ opacity: 0.5, fontSize: 12, marginLeft: 8 }}>build: 001</span>
 
   <button
     onClick={addNode}
