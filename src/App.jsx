@@ -726,6 +726,11 @@ defaultEdgeOptions={{ type: "nf" }}
     setSelectedNodeId(null);
   }}
   fitView
+  minZoom={0.15}
+maxZoom={2}
+zoomOnPinch={true}
+zoomOnDoubleClick={false}
+
   panOnDrag={!linkMode}
   zoomOnScroll={!linkMode}
   panOnScroll={!linkMode}
