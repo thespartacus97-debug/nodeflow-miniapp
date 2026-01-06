@@ -98,20 +98,19 @@ function NodeCard({ data, selected, linkMode }) {
 
   const statusChipBg = "rgba(255,255,255,0.10)";
 
-  // Видимая точка
+  // Видимая точка (показываем только в Link mode)
   const dotStyle = {
     width: 10,
     height: 10,
     borderRadius: 999,
-    background: linkMode ? "#6F42FF" : "rgba(255,255,255,0.25)",
-    border: linkMode
-      ? "1px solid rgba(111,66,255,0.9)"
-      : "1px solid rgba(255,255,255,0.22)",
-    boxShadow: linkMode ? "0 0 0 6px rgba(111,66,255,0.18)" : "none",
+    background: "#6F42FF",
+    border: "1px solid rgba(111,66,255,0.9)",
+    boxShadow: "0 0 0 6px rgba(111,66,255,0.18)",
+    opacity: linkMode ? 1 : 0,
   };
 
-  // Большая зона касания для источников (куда нажимать пальцем)
-  const bigHandleStyle = {
+  // Большая зона касания (но в Link OFF она не ловит палец)
+  const baseHandle = {
     width: 34,
     height: 34,
     borderRadius: 999,
@@ -120,6 +119,7 @@ function NodeCard({ data, selected, linkMode }) {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
+    pointerEvents: linkMode ? "all" : "none", // 🔥 главное: не мешает drag в Link OFF
   };
 
   return (
@@ -134,32 +134,31 @@ function NodeCard({ data, selected, linkMode }) {
         position: "relative",
       }}
     >
-      {/* ✅ Невидимый "приёмник" на ВСЮ ноду — теперь можно тянуть к любой части ноды */}
-      {linkMode && (
-        <Handle
-          type="target"
-          position={Position.Left}
-          id="target-all"
-          style={{
-            position: "absolute",
-            left: 0,
-            top: 0,
-            width: "100%",
-            height: "100%",
-            borderRadius: 14,
-            opacity: 0,
-            border: "none",
-            background: "transparent",
-          }}
-        />
-      )}
+      {/* ✅ Приёмник на всю ноду (существует ВСЕГДА, чтобы edges не пропадали) */}
+      <Handle
+        type="target"
+        position={Position.Left}
+        id="target-all"
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 0,
+          width: "100%",
+          height: "100%",
+          borderRadius: 14,
+          opacity: 0,
+          border: "none",
+          background: "transparent",
+          pointerEvents: linkMode ? "all" : "none",
+        }}
+      />
 
-      {/* ==== 4 источника: Left / Right / Top / Bottom ==== */}
+      {/* ==== 4 источника (существуют ВСЕГДА для корректного рендера линий) ==== */}
       <Handle
         type="source"
         position={Position.Left}
         id="s-left"
-        style={{ ...bigHandleStyle, left: -17 }}
+        style={{ ...baseHandle, left: -17 }}
       >
         <div style={dotStyle} />
       </Handle>
@@ -168,7 +167,7 @@ function NodeCard({ data, selected, linkMode }) {
         type="source"
         position={Position.Right}
         id="s-right"
-        style={{ ...bigHandleStyle, right: -17 }}
+        style={{ ...baseHandle, right: -17 }}
       >
         <div style={dotStyle} />
       </Handle>
@@ -177,7 +176,7 @@ function NodeCard({ data, selected, linkMode }) {
         type="source"
         position={Position.Top}
         id="s-top"
-        style={{ ...bigHandleStyle, top: -17 }}
+        style={{ ...baseHandle, top: -17 }}
       >
         <div style={dotStyle} />
       </Handle>
@@ -186,7 +185,7 @@ function NodeCard({ data, selected, linkMode }) {
         type="source"
         position={Position.Bottom}
         id="s-bottom"
-        style={{ ...bigHandleStyle, bottom: -17 }}
+        style={{ ...baseHandle, bottom: -17 }}
       >
         <div style={dotStyle} />
       </Handle>
@@ -219,6 +218,7 @@ function NodeCard({ data, selected, linkMode }) {
     </div>
   );
 }
+
 
 
 
