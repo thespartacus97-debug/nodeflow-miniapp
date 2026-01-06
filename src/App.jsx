@@ -718,6 +718,7 @@ function deleteSelectedNode() {
   nodeTypes={nodeTypes}
   edgeTypes={edgeTypes}
 defaultEdgeOptions={{ type: "nf" }}
+preventScrolling={true}
 
   edges={edges}
   onNodesChange={onNodesChange}
@@ -738,7 +739,8 @@ maxZoom={2}
 zoomOnPinch={true}
 zoomOnDoubleClick={false}
 
-  panOnDrag={!linkMode}
+  panOnDrag={true}
+
   zoomOnScroll={!linkMode}
   panOnScroll={!linkMode}
   nodesConnectable={linkMode}
