@@ -13,6 +13,19 @@ if (tg) {
   tg.ready();
   tg.expand();
 }
+const isDark = tg?.colorScheme === "dark";
+
+const theme = {
+  bg: isDark ? "#0f0f10" : "#ffffff",
+  panel: isDark ? "#151517" : "#ffffff",
+  text: isDark ? "#f5f5f5" : "#111111",
+  muted: isDark ? "rgba(245,245,245,0.65)" : "rgba(17,17,17,0.6)",
+  border: isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.12)",
+  btnBg: isDark ? "#ffffff" : "#111111",
+  btnText: isDark ? "#111111" : "#ffffff",
+  inputBg: isDark ? "#ffffff" : "#ffffff",
+  inputText: "#111111",
+};
 
 function projectsStorageKey(userId) {
   return `nodeflow:projects:${userId || "guest"}`;
@@ -268,46 +281,50 @@ export default function App() {
   }
 
   return (
-    <div style={{ height: "100vh", display: "flex", flexDirection: "column" }}>
+    <div style={{ height: "100dvh", display: "flex", flexDirection: "column" }}>
       {/* Top bar */}
       <div
         style={{
-          padding: 12,
-          borderBottom: "1px solid #eee",
-          fontFamily: "Arial, sans-serif",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 10,
-        }}
+  padding: "8px 10px",
+  borderRadius: 10,
+  border: `1px solid ${theme.border}`,
+  background: theme.btnBg,
+  color: theme.btnText,
+  fontWeight: 800,
+}}
+
       >
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <button
-            onClick={() => setCurrentProject(null)}
-            style={{
-              padding: "8px 10px",
-              borderRadius: 10,
-              border: "1px solid #ddd",
-              background: "white",
-            }}
-          >
-            ← Back
-          </button>
+  onClick={() => setCurrentProject(null)}
+  style={{
+    padding: "8px 10px",
+    borderRadius: 10,
+    border: "1px solid #ddd",
+    background: "#ffffff",
+    color: "#111111",
+  }}
+>
+  ← Back
+</button>
+
           <div style={{ fontWeight: 800 }}>{currentProject.title}</div>
         </div>
 
         <button
-          onClick={addNode}
-          style={{
-            padding: "8px 10px",
-            borderRadius: 10,
-            border: "1px solid #ddd",
-            background: "white",
-            fontWeight: 800,
-          }}
-        >
-          + Node
-        </button>
+  onClick={addNode}
+  style={{
+    padding: "8px 10px",
+    borderRadius: 10,
+    border: "1px solid #ddd",
+    background: "#ffffff",
+    color: "#111111",
+    fontWeight: 800,
+  }}
+>
+  + Node
+</button>
+
       </div>
 
       {/* Canvas */}
@@ -330,11 +347,13 @@ export default function App() {
       {/* Bottom sheet */}
       <div
         style={{
-          padding: 12,
-          borderTop: "1px solid #eee",
-          fontFamily: "Arial, sans-serif",
-          background: "white",
-        }}
+  padding: 12,
+  borderTop: "1px solid #eee",
+  fontFamily: "Arial, sans-serif",
+  background: "#111111",
+  color: "#ffffff",
+}}
+
       >
         {!selectedNode ? (
           <div style={{ opacity: 0.65 }}>Tap a node to edit.</div>
@@ -347,11 +366,14 @@ export default function App() {
               onChange={(e) => updateSelectedNode({ title: e.target.value })}
               placeholder="Title"
               style={{
-                padding: 10,
-                borderRadius: 10,
-                border: "1px solid #ccc",
-                outline: "none",
-              }}
+  padding: 10,
+  borderRadius: 10,
+  border: "1px solid #ccc",
+  outline: "none",
+  background: "#ffffff",
+  color: "#111111",
+}}
+
             />
 
             <div style={{ display: "flex", gap: 8 }}>
