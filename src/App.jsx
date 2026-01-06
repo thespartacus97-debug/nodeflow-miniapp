@@ -772,7 +772,7 @@ isValidConnection={(c) => c.source !== c.target}
     zIndex: 10,
     display: "flex",
     alignItems: "center",
-    gap: 8,
+    gap: 6,
     pointerEvents: "auto",
   }}
 >
@@ -780,8 +780,9 @@ isValidConnection={(c) => c.source !== c.target}
   <button
     onClick={() => setShowControls((v) => !v)}
     style={{
-      width: 14,
-      height: 64,
+      width: 16,
+      height: 96,
+
       borderRadius: 999,
       border: "1px solid rgba(183,183,183,0.18)",
       background: "rgba(23,23,23,0.92)",
@@ -805,94 +806,82 @@ isValidConnection={(c) => c.source !== c.target}
         background: "rgba(23,23,23,0.92)",
       }}
     >
-      <Controls showInteractive={false} />
+      <Controls />
+
     </div>
   )}
 </div>
 
-          {/* MiniMap + Toggle */}
+{/* MiniMap + Toggle */}
 <div
   style={{
     position: "absolute",
     right: 12,
     bottom: 12,
     zIndex: 10,
-    display: "flex",
-    alignItems: "flex-end",
-    gap: 8,
     pointerEvents: "auto",
   }}
 >
-  {!showMiniMap && (
+  {/* Кнопка всегда видима */}
   <button
-    onClick={() => setShowMiniMap(true)}
+    onClick={() => setShowMiniMap((v) => !v)}
     style={{
-      height: 36,
-      width: 44,
-      borderRadius: 12,
-      border: "1px solid rgba(183,183,183,0.22)",
+      position: "absolute",
+      right: 8,
+      top: 8,
+      width: 28,
+      height: 28,
+      borderRadius: 10,
+      border: "1px solid rgba(183,183,183,0.18)",
       background: "rgba(23,23,23,0.92)",
       color: "#FFFFFF",
       fontWeight: 900,
+      lineHeight: "26px",
+      zIndex: 2,
+    }}
+    aria-label="Toggle minimap"
+  >
+    {showMiniMap ? "_" : "▢"}
+  </button>
+
+  {/* Контейнер миникарты (когда скрыта — остаётся маленькая плашка-держатель) */}
+  <div
+    style={{
+      width: showMiniMap ? 150 : 54,
+      height: showMiniMap ? 110 : 44,
+      borderRadius: 14,
+      overflow: "hidden",
+      border: "1px solid rgba(183,183,183,0.18)",
+      background: "rgba(23,23,23,0.92)",
+      boxShadow: "0 10px 30px rgba(0,0,0,0.35)",
+      position: "relative",
+      transition: "width 120ms ease, height 120ms ease",
     }}
   >
-    ▢
-  </button>
-)}
-
-
-  {showMiniMap && (
-    
-    <div
-      style={{
-        borderRadius: 14,
-        overflow: "hidden", position: "relative",
-
-        border: "1px solid rgba(183,183,183,0.18)",
-        background: "rgba(23,23,23,0.92)",
-        boxShadow: "0 10px 30px rgba(0,0,0,0.35)",
-      }}
-    >
-      <button
-  onClick={() => setShowMiniMap(false)}
-  style={{
-    position: "absolute",
-    right: 8,
-    top: 8,
-    width: 28,
-    height: 28,
-    borderRadius: 10,
-    border: "1px solid rgba(183,183,183,0.18)",
-    background: "rgba(23,23,23,0.92)",
-    color: "#FFFFFF",
-    fontWeight: 900,
-    lineHeight: "28px",
-  }}
->
-  _
-</button>
-
+    {showMiniMap && (
       <MiniMap
         style={{
           width: 150,
           height: 110,
-          backgroundColor: "rgba(23,23,23,0.92)", // #171717
+          backgroundColor: "rgba(23,23,23,0.92)",
         }}
-        maskColor="rgba(15,15,16,0.55)" // мягкая маска
+        maskColor="rgba(15,15,16,0.55)"
         nodeColor={(n) => {
-          // палитра: selected -> #6F42FF, active -> #00C2FF, остальное -> #B7B7B7
           if (n.selected) return "#6F42FF";
           const st = n?.data?.status;
           if (st === "active") return "#00C2FF";
           if (st === "done") return "rgba(183,183,183,0.55)";
           return "rgba(183,183,183,0.85)";
         }}
-        nodeStrokeColor={(n) => (n.selected ? "#6F42FF" : "rgba(255,255,255,0.10)")}
+        nodeStrokeColor={(n) =>
+          n.selected ? "#6F42FF" : "rgba(255,255,255,0.10)"
+        }
         nodeStrokeWidth={2}
       />
-    </div>
-  )}
+    )}
+  </div>
 </div>
+
 
         </ReactFlow>
       </div>
