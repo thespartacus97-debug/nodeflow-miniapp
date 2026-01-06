@@ -152,6 +152,7 @@ export default function App() {
   const [nodes, setNodes] = useState([]);
   const [edges, setEdges] = useState([]);
   const [selectedNodeId, setSelectedNodeId] = useState(null);
+  const [linkMode, setLinkMode] = useState(false);
   const nodeTypes = useMemo(() => ({ card: NodeCard }), []);
 
   // load graph when project opens
@@ -195,20 +196,21 @@ export default function App() {
   );
 
   const onConnect = useCallback(
-    (connection) => {
-      // connection: { source, target }
-      setEdges((eds) =>
-        addEdge(
-          {
-            ...connection,
-            id: crypto.randomUUID(),
-          },
-          eds
-        )
-      );
-    },
-    []
-  );
+  (connection) => {
+    if (!linkMode) return; // 🔒 only in Link mode
+    setEdges((eds) =>
+      addEdge(
+        {
+          ...connection,
+          id: crypto.randomUUID(),
+        },
+        eds
+      )
+    );
+  },
+  [linkMode]
+);
+
 
   function addNode() {
     const id = crypto.randomUUID();
@@ -389,22 +391,46 @@ export default function App() {
           >
             ← Back
           </button>
-          <div style={{ fontWeight: 800 }}>{currentProject.title}</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+  <div style={{ fontWeight: 800 }}>{currentProject.title}</div>
+  {linkMode && (
+    <div style={{ fontSize: 12, color: "rgba(255,255,255,0.65)" }}>
+      Link mode ON
+    </div>
+  )}
+</div>
         </div>
 
-        <button
-          onClick={addNode}
-          style={{
-            padding: "8px 10px",
-            borderRadius: 10,
-            border: "1px solid rgba(255,255,255,0.12)",
-            background: "#6F42FF",
-            color: "#FFFFFF",
-            fontWeight: 800,
-          }}
-        >
-          + Node
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+  <button
+    onClick={() => setLinkMode((v) => !v)}
+    style={{
+      padding: "8px 10px",
+      borderRadius: 10,
+      border: "1px solid rgba(255,255,255,0.12)",
+      background: linkMode ? "#6F42FF" : "#151517",
+      color: "#FFFFFF",
+      fontWeight: 800,
+    }}
+  >
+    Link
+  </button>
+
+  <button
+    onClick={addNode}
+    style={{
+      padding: "8px 10px",
+      borderRadius: 10,
+      border: "1px solid rgba(255,255,255,0.12)",
+      background: "#6F42FF",
+      color: "#FFFFFF",
+      fontWeight: 800,
+    }}
+  >
+    + Node
+  </button>
+</div>
+
       </div>
 
       {/* Canvas */}
