@@ -34,7 +34,7 @@ function graphStorageKey(userId, projectId) {
   return `nodeflow:graph:${userId || "guest"}:${projectId}`;
 }
 
-export default function App() 
+export default function App() {
   const user = tg?.initDataUnsafe?.user;
   const userId = user?.id;
 
@@ -302,4 +302,5 @@ export default function App()
 </div>
 </div>
   );
+}
 
