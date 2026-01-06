@@ -768,56 +768,50 @@ isValidConnection={(c) => c.source !== c.target}
   style={{
     position: "absolute",
     left: 12,
-    bottom: 90,
+    bottom: 12, // ✅ на уровне миникарты
     zIndex: 10,
-    display: "flex",
-    alignItems: "center",
-    height: 132,
-
-
-    gap: 6,
     pointerEvents: "auto",
   }}
 >
-  {/* ручка */}
+  {/* ручка (всегда сверху, отдельно от тулбара) */}
   <button
     onClick={() => setShowControls((v) => !v)}
     style={{
-      wwidth: 14,
+      position: "absolute",
+      left: 0,
+      bottom: 58, // по центру тулбара визуально
+      width: 14,
       height: 34,
       borderRadius: 10,
-      opacity: 0.9,
       border: "1px solid rgba(183,183,183,0.18)",
-      background: "transparent",
+      background: "rgba(23,23,23,0.92)",
       color: "rgba(255,255,255,0.75)",
       fontWeight: 900,
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
+      zIndex: 9999,
     }}
     aria-label="Toggle controls"
   >
     {showControls ? "❮" : "❯"}
-
   </button>
 
   {showControls && (
     <div
       style={{
+        marginLeft: 22, // ✅ тулбар всегда правее ручки
         borderRadius: 14,
         overflow: "hidden",
-        height: 132,
-
         border: "none",
-
-        background: "rgba(23,23,23,0.92)",
+        background: "transparent",
       }}
     >
       <Controls />
-
     </div>
   )}
 </div>
+
 
 {/* MiniMap + Toggle */}
 <div
@@ -882,17 +876,12 @@ isValidConnection={(c) => c.source !== c.target}
   backgroundColor: "rgba(23,23,23,0.92)",
 }}
  
-        maskColor="rgba(15,15,16,0.55)"
-        nodeColor={(n) => {
-          if (n.selected) return "#6F42FF";
-          const st = n?.data?.status;
-          if (st === "active") return "#00C2FF";
-          if (st === "done") return "rgba(183,183,183,0.55)";
-          return "rgba(183,183,183,0.85)";
-        }}
-        nodeStrokeColor={(n) =>
-          n.selected ? "#6F42FF" : "rgba(255,255,255,0.10)"
-        }
+        maskColor="rgba(0,0,0,0.15)"
+
+        nnodeColor={() => "#00C2FF"}
+
+        nodeStrokeColor={() => "#6F42FF"}
+
         nodeStrokeWidth={2}
       />
     )}
