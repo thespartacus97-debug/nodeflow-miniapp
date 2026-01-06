@@ -15,3 +15,21 @@ body {
   height: 100%;
   overscroll-behavior: none;
 }
+/* Nodeflow: dark controls */
+.react-flow__controls {
+  box-shadow: none !important;
+}
+
+.react-flow__controls-button {
+  background: rgba(23, 23, 23, 0.92) !important;
+  border-bottom: 1px solid rgba(183, 183, 183, 0.16) !important;
+  color: #ffffff !important;
+}
+
+.react-flow__controls-button svg {
+  fill: #ffffff !important;
+}
+
+.react-flow__controls-button:hover {
+  background: rgba(111, 66, 255, 0.18) !important;
+}

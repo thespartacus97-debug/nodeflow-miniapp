@@ -355,6 +355,8 @@ function App() {
   const [selectedEdgeId, setSelectedEdgeId] = useState(null);
   const [linkMode, setLinkMode] = useState(false);
   const [showMiniMap, setShowMiniMap] = useState(true);
+  const [showControls, setShowControls] = useState(true);
+
 
   function nearestTargetHandle({ sourceHandle }) {
   // Стараемся приходить "симметрично": справа -> слева, сверху -> сверху и т.д.
@@ -761,7 +763,53 @@ isValidConnection={(c) => c.source !== c.target}
 
         >
           <Background />
-          <Controls />
+         {/* Controls + Handle */}
+<div
+  style={{
+    position: "absolute",
+    left: 12,
+    bottom: 90,
+    zIndex: 10,
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    pointerEvents: "auto",
+  }}
+>
+  {/* ручка */}
+  <button
+    onClick={() => setShowControls((v) => !v)}
+    style={{
+      width: 14,
+      height: 64,
+      borderRadius: 999,
+      border: "1px solid rgba(183,183,183,0.18)",
+      background: "rgba(23,23,23,0.92)",
+      color: "rgba(255,255,255,0.75)",
+      fontWeight: 900,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+    }}
+    aria-label="Toggle controls"
+  >
+    {showControls ? "‹" : "›"}
+  </button>
+
+  {showControls && (
+    <div
+      style={{
+        borderRadius: 14,
+        overflow: "hidden",
+        border: "1px solid rgba(183,183,183,0.18)",
+        background: "rgba(23,23,23,0.92)",
+      }}
+    >
+      <Controls showInteractive={false} />
+    </div>
+  )}
+</div>
+
           {/* MiniMap + Toggle */}
 <div
   style={{
@@ -775,31 +823,55 @@ isValidConnection={(c) => c.source !== c.target}
     pointerEvents: "auto",
   }}
 >
+  {!showMiniMap && (
   <button
-    onClick={() => setShowMiniMap((v) => !v)}
+    onClick={() => setShowMiniMap(true)}
     style={{
       height: 36,
-      padding: "0 12px",
+      width: 44,
       borderRadius: 12,
-      border: "1px solid rgba(183,183,183,0.22)", // #B7B7B7
-      background: "rgba(23,23,23,0.92)", // #171717
+      border: "1px solid rgba(183,183,183,0.22)",
+      background: "rgba(23,23,23,0.92)",
       color: "#FFFFFF",
-      fontWeight: 800,
+      fontWeight: 900,
     }}
   >
-    {showMiniMap ? "Hide map" : "Show map"}
+    ▢
   </button>
+)}
+
 
   {showMiniMap && (
+    
     <div
       style={{
         borderRadius: 14,
-        overflow: "hidden",
+        overflow: "hidden", position: "relative",
+
         border: "1px solid rgba(183,183,183,0.18)",
         background: "rgba(23,23,23,0.92)",
         boxShadow: "0 10px 30px rgba(0,0,0,0.35)",
       }}
     >
+      <button
+  onClick={() => setShowMiniMap(false)}
+  style={{
+    position: "absolute",
+    right: 8,
+    top: 8,
+    width: 28,
+    height: 28,
+    borderRadius: 10,
+    border: "1px solid rgba(183,183,183,0.18)",
+    background: "rgba(23,23,23,0.92)",
+    color: "#FFFFFF",
+    fontWeight: 900,
+    lineHeight: "28px",
+  }}
+>
+  _
+</button>
+
       <MiniMap
         style={{
           width: 150,
