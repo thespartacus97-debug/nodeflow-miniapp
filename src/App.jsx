@@ -34,7 +34,7 @@ function graphStorageKey(userId, projectId) {
   return `nodeflow:graph:${userId || "guest"}:${projectId}`;
 }
 
-export default function App() {
+export default function App() 
   const user = tg?.initDataUnsafe?.user;
   const userId = user?.id;
 
@@ -196,9 +196,16 @@ export default function App() {
   }
 
   // ---------- UI ----------
-  if (!currentProject) {
-    return (
-      <div style={{ padding: 16, fontFamily: "Arial, sans-serif" }}>
+  if (!currentProject) 
+  return (
+    <div
+      style={{
+        padding: 16,
+        fontFamily: "Arial, sans-serif",
+        background: "#0F0F10",
+        minHeight: "100dvh",
+        color: "#FFFFFF",
+      }}>
         <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
           <h1 style={{ margin: 0 }}>Nodeflow</h1>
           <span style={{ opacity: 0.6, fontSize: 12 }}>
@@ -206,210 +213,93 @@ export default function App() {
           </span>
         </div>
 
-        <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
-          <input
-            value={newProjectTitle}
-            onChange={(e) => setNewProjectTitle(e.target.value)}
-            placeholder="New project name"
-            style={{
-              flex: 1,
-              padding: 10,
-              borderRadius: 10,
-              border: "1px solid #ccc",
-              outline: "none",
-            }}
-          />
-          <button
-            onClick={createProject}
-            style={{
-              padding: "10px 12px",
-              borderRadius: 10,
-              border: "1px solid #ccc",
-              background: "white",
-              fontWeight: 700,
-            }}
-          >
-            + Add
-          </button>
-        </div>
-
-        <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
-          {projects.map((p) => (
-            <div
-              key={p.id}
-              style={{
-                padding: 12,
-                border: "1px solid #eee",
-                borderRadius: 12,
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              <div
-                style={{ cursor: "pointer" }}
-                onClick={() => setCurrentProject(p)}
-              >
-                <div style={{ fontWeight: 700 }}>{p.title}</div>
-                <div style={{ fontSize: 12, opacity: 0.6 }}>
-                  {new Date(p.createdAt).toLocaleString()}
-                </div>
-              </div>
-
-              <button
-                onClick={() => deleteProject(p.id)}
-                style={{
-                  padding: "8px 10px",
-                  borderRadius: 10,
-                  border: "1px solid #eee",
-                  background: "white",
-                }}
-              >
-                Delete
-              </button>
-            </div>
-          ))}
-        </div>
-
-        {projects.length === 0 && (
-          <div style={{ marginTop: 12, opacity: 0.65 }}>
-            No projects yet. Create your first one.
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  return (
-    <div style={{ height: "100dvh", display: "flex", flexDirection: "column" }}>
-      {/* Top bar */}
-      <div
-        style={{
-  padding: "8px 10px",
-  borderRadius: 10,
-  border: `1px solid ${theme.border}`,
-  background: theme.btnBg,
-  color: theme.btnText,
-  fontWeight: 800,
-}}
-
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <button
-  onClick={() => setCurrentProject(null)}
+        <div
   style={{
-    padding: "8px 10px",
-    borderRadius: 10,
-    border: "1px solid #ddd",
-    background: "#ffffff",
-    color: "#111111",
+    marginTop: 16,
+    display: "flex",
+    gap: 8,
   }}
 >
-  ← Back
-</button>
-
-          <div style={{ fontWeight: 800 }}>{currentProject.title}</div>
-        </div>
-
-        <button
-  onClick={addNode}
+  <input
+  value={newProjectTitle}
+  onChange={(e) => setNewProjectTitle(e.target.value)}
+  placeholder="New project name"
   style={{
-    padding: "8px 10px",
-    borderRadius: 10,
-    border: "1px solid #ddd",
-    background: "#ffffff",
-    color: "#111111",
-    fontWeight: 800,
+    flex: 1,
+    height: 44,
+    padding: "0 14px",
+    borderRadius: 12,
+    border: "1px solid rgba(255,255,255,0.12)",
+    background: "#151517",
+    color: "#FFFFFF",
+    outline: "none",
+  }}
+/>
+<button
+  onClick={createProject}
+  style={{
+    height: 44,
+    padding: "0 16px",
+    borderRadius: 12,
+    border: "1px solid rgba(255,255,255,0.12)",
+    background: "#6F42FF",
+    color: "#FFFFFF",
+    fontWeight: 700,
   }}
 >
-  + Node
+  + Add
 </button>
+</div>
 
-      </div>
-
-      {/* Canvas */}
-      <div style={{ flex: 1 }}>
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          onNodeClick={(_, node) => setSelectedNodeId(node.id)}
-          fitView
+<div style={{ marginTop: 12, display: "grid", gap: 10 }}>
+  {projects.map((p) => (
+    <div
+      key={p.id}
+      style={{
+        padding: 14,
+        borderRadius: 14,
+        border: "1px solid rgba(255,255,255,0.10)",
+        background: "#151517",
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+      }}
+    >
+      <div style={{ cursor: "pointer" }} onClick={() => setCurrentProject(p)}>
+        <div style={{ fontWeight: 700 }}>{p.title}</div>
+        <div
+          style={{
+            fontSize: 12,
+            marginTop: 4,
+            opacity: 0.6,
+          }}
         >
-          <Background />
-          <Controls />
-          <MiniMap />
-        </ReactFlow>
+          {new Date(p.createdAt).toLocaleString()}
+        </div>
       </div>
 
-      {/* Bottom sheet */}
-      <div
+      <button
+        onClick={() => deleteProject(p.id)}
         style={{
-  padding: 12,
-  borderTop: "1px solid #eee",
-  fontFamily: "Arial, sans-serif",
-  background: "#111111",
-  color: "#ffffff",
-}}
-
+          height: 32,
+          padding: "0 12px",
+          borderRadius: 10,
+          border: "1px solid rgba(255,255,255,0.12)",
+          background: "transparent",
+          color: "rgba(255,255,255,0.7)",
+        }}
       >
-        {!selectedNode ? (
-          <div style={{ opacity: 0.65 }}>Tap a node to edit.</div>
-        ) : (
-          <div style={{ display: "grid", gap: 8 }}>
-            <div style={{ fontWeight: 800 }}>Node</div>
-
-            <input
-              value={selectedNode.data?.title || ""}
-              onChange={(e) => updateSelectedNode({ title: e.target.value })}
-              placeholder="Title"
-              style={{
-  padding: 10,
-  borderRadius: 10,
-  border: "1px solid #ccc",
-  outline: "none",
-  background: "#ffffff",
-  color: "#111111",
-}}
-
-            />
-
-            <div style={{ display: "flex", gap: 8 }}>
-              {["idea", "active", "done"].map((s) => (
-                <button
-                  key={s}
-                  onClick={() => updateSelectedNode({ status: s })}
-                  style={{
-                    flex: 1,
-                    padding: "10px 8px",
-                    borderRadius: 10,
-                    border: "1px solid #ddd",
-                    background:
-                      selectedNode.data?.status === s ? "#f2f2f2" : "white",
-                    fontWeight: 800,
-                  }}
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
-
-            <button
-              onClick={deleteSelectedNode}
-              style={{
-                padding: "10px 8px",
-                borderRadius: 10,
-                border: "1px solid #eee",
-                background: "white",
-              }}
-            >
-              Delete node
-            </button>
-          </div>
-        )}
-      </div>
+        Delete
+      </button>
     </div>
+  ))}
+
+  {projects.length === 0 && (
+    <div style={{ marginTop: 6, opacity: 0.65 }}>
+      Create your first project to start thinking in flows.
+    </div>
+  )}
+</div>
+</div>
   );
-}
+
