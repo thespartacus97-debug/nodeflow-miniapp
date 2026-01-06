@@ -62,15 +62,16 @@ function NodeCard({ data, selected, linkMode }) {
 
   // Большая зона касания (невидимая), но с подсветкой в Link mode
   const handleStyle = {
-    width: 32,
-    height: 32,
-    borderRadius: 999,
-    background: "transparent",
-    border: "none",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  };
+  width: 32,
+  height: 32,
+  borderRadius: 999,
+  background: "transparent",
+  border: "none",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+};
+
 
   return (
     <div
@@ -85,14 +86,24 @@ function NodeCard({ data, selected, linkMode }) {
       }}
     >
       {/* TARGET: входящая связь (слева) */}
-      <Handle type="target" position={Position.Left} style={handleStyle}>
-        <div style={dotStyle} />
-      </Handle>
+      <Handle
+  type="target"
+  position={Position.Left}
+  style={{ ...handleStyle, left: -16 }}
+>
+  <div style={dotStyle} />
+</Handle>
+
 
       {/* SOURCE: исходящая связь (справа) */}
-      <Handle type="source" position={Position.Right} style={handleStyle}>
-        <div style={dotStyle} />
-      </Handle>
+      <Handle
+  type="source"
+  position={Position.Right}
+  style={{ ...handleStyle, right: -16 }}
+>
+  <div style={dotStyle} />
+</Handle>
+
 
       <div style={{ fontWeight: 800, color: titleColor, fontSize: 14 }}>
         {title}
@@ -185,6 +196,7 @@ export default function App() {
   const [nodes, setNodes] = useState([]);
   const [edges, setEdges] = useState([]);
   const [selectedNodeId, setSelectedNodeId] = useState(null);
+  const [selectedEdgeId, setSelectedEdgeId] = useState(null);
   const [linkMode, setLinkMode] = useState(false);
   const nodeTypes = useMemo(() => ({
   card: (props) => <NodeCard {...props} linkMode={linkMode} />,
@@ -285,13 +297,12 @@ export default function App() {
     );
   }
 
-  function deleteSelectedNode() {
-    if (!selectedNodeId) return;
-    const id = selectedNodeId;
-    setNodes((prev) => prev.filter((n) => n.id !== id));
-    setEdges((prev) => prev.filter((e) => e.source !== id && e.target !== id));
-    setSelectedNodeId(null);
-  }
+  function deleteSelectedEdge() {
+  if (!selectedEdgeId) return;
+  setEdges((prev) => prev.filter((e) => e.id !== selectedEdgeId));
+  setSelectedEdgeId(null);
+}
+
 
     // ---------- UI ----------
   if (!currentProject) {
@@ -478,7 +489,16 @@ export default function App() {
   onNodesChange={onNodesChange}
   onEdgesChange={onEdgesChange}
   onConnect={onConnect}
-  onNodeClick={(_, node) => setSelectedNodeId(node.id)}
+  onNodeClick={(_, node) => {
+  setSelectedNodeId(node.id);
+  setSelectedEdgeId(null);
+}}
+onEdgeClick={(_, edge) => {
+  if (!linkMode) return;
+  setSelectedEdgeId(edge.id);
+  setSelectedNodeId(null);
+}}
+
   fitView
   panOnDrag={!linkMode}
   zoomOnScroll={!linkMode}
@@ -505,8 +525,32 @@ export default function App() {
         }}
       >
         {!selectedNode ? (
-          <div style={{ opacity: 0.65 }}>Tap a node to edit.</div>
-        ) : (
+  selectedEdgeId && linkMode ? (
+    <div style={{ display: "grid", gap: 10 }}>
+      <div style={{ opacity: 0.65 }}>Link selected.</div>
+
+      <button
+        onClick={deleteSelectedEdge}
+        style={{
+          padding: "10px 8px",
+          borderRadius: 10,
+          border: "1px solid rgba(255,255,255,0.12)",
+          background: "#151517",
+          color: "#FFFFFF",
+          fontWeight: 800,
+        }}
+      >
+        Delete link
+      </button>
+
+      <div style={{ opacity: 0.6, fontSize: 12 }}>
+        Tip: tap another link to switch, or turn off Link mode.
+      </div>
+    </div>
+  ) : (
+    <div style={{ opacity: 0.65 }}>Tap a node to edit.</div>
+  )
+) : (
           <div style={{ display: "grid", gap: 8 }}>
             <div style={{ fontWeight: 800 }}>Node</div>
 
