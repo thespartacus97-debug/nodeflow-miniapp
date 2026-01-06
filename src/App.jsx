@@ -135,8 +135,39 @@ function NodeCard({ data, selected, linkMode }) {
 }
 
 
+import React from "react";
 
-export default function App() {
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, message: "" };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, message: String(error?.message || error) };
+  }
+
+  componentDidCatch(error) {
+    console.log("Nodeflow crash:", error);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: 16, fontFamily: "Arial", background: "#0F0F10", color: "#fff", minHeight: "100dvh" }}>
+          <h2 style={{ marginTop: 0 }}>Nodeflow crashed</h2>
+          <div style={{ opacity: 0.8, whiteSpace: "pre-wrap" }}>{this.state.message}</div>
+          <div style={{ marginTop: 12, opacity: 0.7 }}>
+            Tip: send me this error text — I’ll fix it fast.
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+function App() {
   const user = tg?.initDataUnsafe?.user;
   const userId = user?.id;
 
@@ -203,25 +234,53 @@ export default function App() {
 }), [linkMode]);
 
 
-  // load graph when project opens
-  useEffect(() => {
-    if (!gKey) return;
-    try {
-      const raw = localStorage.getItem(gKey);
-      if (!raw) {
-        setNodes([]);
-        setEdges([]);
-        return;
-      }
-      const data = JSON.parse(raw);
-      setNodes(Array.isArray(data.nodes) ? data.nodes : []);
-      setEdges(Array.isArray(data.edges) ? data.edges : []);
-    } catch {
+  // load graph when project opens (with sanitizing)
+useEffect(() => {
+  if (!gKey) return;
+
+  try {
+    const raw = localStorage.getItem(gKey);
+    if (!raw) {
       setNodes([]);
       setEdges([]);
+      return;
     }
-    setSelectedNodeId(null);
-  }, [gKey]);
+
+    const data = JSON.parse(raw);
+
+    const safeNodes = (Array.isArray(data.nodes) ? data.nodes : []).map((n) => {
+      const x = Number(n?.position?.x);
+      const y = Number(n?.position?.y);
+
+      return {
+        ...n,
+        position: {
+          x: Number.isFinite(x) ? x : 40,
+          y: Number.isFinite(y) ? y : 40,
+        },
+        data: {
+          title: n?.data?.title || "New step",
+          status: n?.data?.status || "idea",
+        },
+        type: n?.type || "card",
+      };
+    });
+
+    const safeEdges = (Array.isArray(data.edges) ? data.edges : []).filter(
+      (e) => e && e.id && e.source && e.target
+    );
+
+    setNodes(safeNodes);
+    setEdges(safeEdges);
+  } catch {
+    setNodes([]);
+    setEdges([]);
+  }
+
+  setSelectedNodeId(null);
+  setSelectedEdgeId(null);
+}, [gKey]);
+
 
   // save graph
   useEffect(() => {
@@ -490,15 +549,14 @@ export default function App() {
   onEdgesChange={onEdgesChange}
   onConnect={onConnect}
   onNodeClick={(_, node) => {
-  setSelectedNodeId(node.id);
-  setSelectedEdgeId(null);
-}}
-onEdgeClick={(_, edge) => {
-  if (!linkMode) return;
-  setSelectedEdgeId(edge.id);
-  setSelectedNodeId(null);
-}}
-
+    setSelectedNodeId(node.id);
+    setSelectedEdgeId(null);
+  }}
+  onEdgeClick={(_, edge) => {
+    if (!linkMode) return;
+    setSelectedEdgeId(edge.id);
+    setSelectedNodeId(null);
+  }}
   fitView
   panOnDrag={!linkMode}
   zoomOnScroll={!linkMode}
@@ -506,7 +564,11 @@ onEdgeClick={(_, edge) => {
   nodesConnectable={linkMode}
   nodesDraggable={!linkMode}
   connectionRadius={40}
-          style={{ background: "#0F0F10" }}
+  deleteKeyCode={null}
+  multiSelectionKeyCode={null}
+  selectionKeyCode={null}
+  style={{ background: "#0F0F10" }}
+
         >
           <Background />
           <Controls />
@@ -605,5 +667,12 @@ onEdgeClick={(_, edge) => {
         )}
       </div>
     </div>
+  );
+}
+export default function AppWithBoundary() {
+  return (
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
   );
 }
