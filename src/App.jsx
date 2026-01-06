@@ -36,7 +36,7 @@ function projectsStorageKey(userId) {
 function graphStorageKey(userId, projectId) {
   return `nodeflow:graph:${userId || "guest"}:${projectId}`;
 }
-function NodeCard({ data, selected }) {
+function NodeCard({ data, selected, linkMode }) {
   const status = data?.status || "idea";
   const title = data?.title || "Untitled";
 
@@ -50,13 +50,26 @@ function NodeCard({ data, selected }) {
 
   const statusChipBg = "rgba(255,255,255,0.10)";
 
-  // маленькие аккуратные точки для соединений
-  const handleStyle = {
+  // Маленькая видимая точка
+  const dotStyle = {
     width: 10,
     height: 10,
     borderRadius: 999,
-    border: "1px solid rgba(255,255,255,0.18)",
-    background: "#0F0F10",
+    background: linkMode ? "#6F42FF" : "rgba(255,255,255,0.25)",
+    border: linkMode ? "1px solid rgba(111,66,255,0.9)" : "1px solid rgba(255,255,255,0.22)",
+    boxShadow: linkMode ? "0 0 0 6px rgba(111,66,255,0.18)" : "none",
+  };
+
+  // Большая зона касания (невидимая), но с подсветкой в Link mode
+  const handleStyle = {
+    width: 32,
+    height: 32,
+    borderRadius: 999,
+    background: "transparent",
+    border: "none",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
   };
 
   return (
@@ -72,10 +85,14 @@ function NodeCard({ data, selected }) {
       }}
     >
       {/* TARGET: входящая связь (слева) */}
-      <Handle type="target" position={Position.Left} style={handleStyle} />
+      <Handle type="target" position={Position.Left} style={handleStyle}>
+        <div style={dotStyle} />
+      </Handle>
 
       {/* SOURCE: исходящая связь (справа) */}
-      <Handle type="source" position={Position.Right} style={handleStyle} />
+      <Handle type="source" position={Position.Right} style={handleStyle}>
+        <div style={dotStyle} />
+      </Handle>
 
       <div style={{ fontWeight: 800, color: titleColor, fontSize: 14 }}>
         {title}
@@ -105,6 +122,7 @@ function NodeCard({ data, selected }) {
     </div>
   );
 }
+
 
 
 export default function App() {
@@ -168,7 +186,10 @@ export default function App() {
   const [edges, setEdges] = useState([]);
   const [selectedNodeId, setSelectedNodeId] = useState(null);
   const [linkMode, setLinkMode] = useState(false);
-  const nodeTypes = useMemo(() => ({ card: NodeCard }), []);
+  const nodeTypes = useMemo(() => ({
+  card: (props) => <NodeCard {...props} linkMode={linkMode} />,
+}), [linkMode]);
+
 
   // load graph when project opens
   useEffect(() => {
@@ -451,14 +472,20 @@ export default function App() {
       {/* Canvas */}
       <div style={{ flex: 1, background: "#0F0F10" }}>
         <ReactFlow
-          nodes={nodes}
-          nodeTypes={nodeTypes}
-          edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          onNodeClick={(_, node) => setSelectedNodeId(node.id)}
-          fitView
+  nodes={nodes}
+  nodeTypes={nodeTypes}
+  edges={edges}
+  onNodesChange={onNodesChange}
+  onEdgesChange={onEdgesChange}
+  onConnect={onConnect}
+  onNodeClick={(_, node) => setSelectedNodeId(node.id)}
+  fitView
+  panOnDrag={!linkMode}
+  zoomOnScroll={!linkMode}
+  panOnScroll={!linkMode}
+  nodesConnectable={linkMode}
+  nodesDraggable={!linkMode}
+  connectionRadius={40}
           style={{ background: "#0F0F10" }}
         >
           <Background />
