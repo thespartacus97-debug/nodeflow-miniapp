@@ -705,7 +705,14 @@ function deleteSelectedNode() {
       </div>
 
       {/* Canvas */}
-      <div style={{ flex: 1, background: "#0F0F10" }}>
+      <div
+  style={{
+    flex: 1,
+    background: "#0F0F10",
+    touchAction: "none", // ✅ жесты (pinch/pan) уходят в ReactFlow, а не в page zoom
+  }}
+>
+
         <ReactFlow
   nodes={nodes}
   nodeTypes={nodeTypes}
