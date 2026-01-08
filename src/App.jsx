@@ -650,6 +650,37 @@ function App() {
           position: "relative",
         }}
       >
+        <style>{`
+  /* --- MiniMap визуал и фикс "заливки" --- */
+  .react-flow__minimap {
+    background: rgba(23,23,23,0.92) !important;
+    border-radius: 14px;
+    overflow: hidden;
+  }
+
+  .react-flow__minimap svg {
+    display: block;
+  }
+
+  /* Маска вокруг viewport */
+  .react-flow__minimap-mask {
+    fill: rgba(15,15,16,0.55) !important;
+  }
+
+  /* Сам прямоугольник viewport (он и заливал тебе всё) */
+  .react-flow__minimap-viewport {
+    fill: rgba(0, 194, 255, 0.08) !important;
+    stroke: rgba(0, 194, 255, 0.85) !important;
+    stroke-width: 2px !important;
+  }
+
+  /* Чтобы ноды в миникарте всегда были видны */
+  .react-flow__minimap-node {
+    fill-opacity: 1 !important;
+    stroke-opacity: 1 !important;
+  }
+`}</style>
+
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -786,13 +817,7 @@ function App() {
             >
               {showMiniMap && (
                 <MiniMap
-  style={{
-    width: "100%",
-    height: "100%",
-    display: "block",
-    background: "rgba(23,23,23,0.92)",
-  }}
-  maskColor="rgba(15,15,16,0.55)"
+  style={{ width: "100%", height: "100%" }}
   zoomable={false}
   pannable={false}
   nodeBorderRadius={6}
@@ -808,6 +833,7 @@ function App() {
   }
   nodeStrokeWidth={2}
 />
+
               )}
             </div>
           </div>
