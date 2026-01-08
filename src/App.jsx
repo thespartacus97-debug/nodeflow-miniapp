@@ -29,10 +29,6 @@ const theme = {
   text: isDark ? "#f5f5f5" : "#111111",
   muted: isDark ? "rgba(245,245,245,0.65)" : "rgba(17,17,17,0.6)",
   border: isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.12)",
-  btnBg: isDark ? "#ffffff" : "#111111",
-  btnText: isDark ? "#111111" : "#ffffff",
-  inputBg: "#ffffff",
-  inputText: "#111111",
 };
 
 // ---------- Storage keys ----------
@@ -41,6 +37,74 @@ function projectsStorageKey(userId) {
 }
 function graphStorageKey(userId, projectId) {
   return `nodeflow:graph:${userId || "guest"}:${projectId}`;
+}
+
+// ---------- IndexedDB for images ----------
+const NF_DB_NAME = "nodeflow-db";
+const NF_DB_VERSION = 1;
+const NF_STORE = "images";
+
+function nfOpenDb() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(NF_DB_NAME, NF_DB_VERSION);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(NF_STORE)) {
+        db.createObjectStore(NF_STORE, { keyPath: "id" });
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function nfPutImage(id, blob) {
+  const db = await nfOpenDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(NF_STORE, "readwrite");
+    tx.objectStore(NF_STORE).put({ id, blob, createdAt: Date.now() });
+    tx.oncomplete = () => resolve(true);
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function nfGetImageBlob(id) {
+  const db = await nfOpenDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(NF_STORE, "readonly");
+    const req = tx.objectStore(NF_STORE).get(id);
+    req.onsuccess = () => resolve(req.result?.blob || null);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function nfDeleteImage(id) {
+  const db = await nfOpenDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(NF_STORE, "readwrite");
+    tx.objectStore(NF_STORE).delete(id);
+    tx.oncomplete = () => resolve(true);
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+// downscale big images to keep storage light
+async function nfDownscaleImage(file, maxSide = 1600, quality = 0.85) {
+  const bmp = await createImageBitmap(file);
+  const scale = Math.min(1, maxSide / Math.max(bmp.width, bmp.height));
+  const w = Math.max(1, Math.round(bmp.width * scale));
+  const h = Math.max(1, Math.round(bmp.height * scale));
+
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(bmp, 0, 0, w, h);
+
+  const blob = await new Promise((resolve) =>
+    canvas.toBlob(resolve, "image/jpeg", quality)
+  );
+  return blob || file;
 }
 
 // ---------- Edge ----------
@@ -134,7 +198,7 @@ function NodeCard({ data, selected, linkMode }) {
         position: "relative",
       }}
     >
-      {/* full receiver, but non-blocking in Link OFF */}
+      {/* full receiver */}
       <Handle
         type="target"
         position={Position.Left}
@@ -153,77 +217,35 @@ function NodeCard({ data, selected, linkMode }) {
         }}
       />
 
-      {/* 4 target handles */}
-      <Handle
-        type="target"
-        position={Position.Left}
-        id="t-left"
-        style={{ ...baseHandle, left: -17 }}
-      >
+      {/* targets */}
+      <Handle type="target" position={Position.Left} id="t-left" style={{ ...baseHandle, left: -17 }}>
         <div style={dotStyle} />
       </Handle>
-      <Handle
-        type="target"
-        position={Position.Right}
-        id="t-right"
-        style={{ ...baseHandle, right: -17 }}
-      >
+      <Handle type="target" position={Position.Right} id="t-right" style={{ ...baseHandle, right: -17 }}>
         <div style={dotStyle} />
       </Handle>
-      <Handle
-        type="target"
-        position={Position.Top}
-        id="t-top"
-        style={{ ...baseHandle, top: -17 }}
-      >
+      <Handle type="target" position={Position.Top} id="t-top" style={{ ...baseHandle, top: -17 }}>
         <div style={dotStyle} />
       </Handle>
-      <Handle
-        type="target"
-        position={Position.Bottom}
-        id="t-bottom"
-        style={{ ...baseHandle, bottom: -17 }}
-      >
+      <Handle type="target" position={Position.Bottom} id="t-bottom" style={{ ...baseHandle, bottom: -17 }}>
         <div style={dotStyle} />
       </Handle>
 
-      {/* 4 source handles */}
-      <Handle
-        type="source"
-        position={Position.Left}
-        id="s-left"
-        style={{ ...baseHandle, left: -17 }}
-      >
+      {/* sources */}
+      <Handle type="source" position={Position.Left} id="s-left" style={{ ...baseHandle, left: -17 }}>
         <div style={dotStyle} />
       </Handle>
-      <Handle
-        type="source"
-        position={Position.Right}
-        id="s-right"
-        style={{ ...baseHandle, right: -17 }}
-      >
+      <Handle type="source" position={Position.Right} id="s-right" style={{ ...baseHandle, right: -17 }}>
         <div style={dotStyle} />
       </Handle>
-      <Handle
-        type="source"
-        position={Position.Top}
-        id="s-top"
-        style={{ ...baseHandle, top: -17 }}
-      >
+      <Handle type="source" position={Position.Top} id="s-top" style={{ ...baseHandle, top: -17 }}>
         <div style={dotStyle} />
       </Handle>
-      <Handle
-        type="source"
-        position={Position.Bottom}
-        id="s-bottom"
-        style={{ ...baseHandle, bottom: -17 }}
-      >
+      <Handle type="source" position={Position.Bottom} id="s-bottom" style={{ ...baseHandle, bottom: -17 }}>
         <div style={dotStyle} />
       </Handle>
 
-      <div style={{ fontWeight: 800, color: titleColor, fontSize: 14 }}>
-        {title}
-      </div>
+      <div style={{ fontWeight: 800, color: titleColor, fontSize: 14 }}>{title}</div>
 
       <div style={{ marginTop: 8, display: "flex", gap: 8, alignItems: "center" }}>
         <div
@@ -241,11 +263,83 @@ function NodeCard({ data, selected, linkMode }) {
         </div>
 
         {selected && (
-          <div style={{ color: "#6F42FF", fontSize: 12, fontWeight: 800 }}>
-            selected
-          </div>
+          <div style={{ color: "#6F42FF", fontSize: 12, fontWeight: 800 }}>selected</div>
         )}
       </div>
+    </div>
+  );
+}
+
+// ---------- Thumb ----------
+function NodeImageThumb({ imageId, getUrl, onOpen, onDelete }) {
+  const [url, setUrl] = useState(null);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const u = await getUrl(imageId);
+      if (!alive) return;
+      setUrl(u);
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [imageId, getUrl]);
+
+  return (
+    <div
+      style={{
+        position: "relative",
+        width: "100%",
+        aspectRatio: "1 / 1",
+        borderRadius: 14,
+        overflow: "hidden",
+        border: "1px solid rgba(255,255,255,0.10)",
+        background: "rgba(255,255,255,0.06)",
+      }}
+    >
+      <button
+        onClick={onDelete}
+        style={{
+          position: "absolute",
+          top: 6,
+          right: 6,
+          width: 28,
+          height: 28,
+          borderRadius: 10,
+          border: "1px solid rgba(255,255,255,0.16)",
+          background: "rgba(0,0,0,0.45)",
+          color: "#fff",
+          fontWeight: 900,
+          cursor: "pointer",
+          zIndex: 3,
+        }}
+        aria-label="Delete image"
+        title="Delete"
+      >
+        ✕
+      </button>
+
+      <button
+        onClick={() => url && onOpen(url)}
+        style={{
+          position: "absolute",
+          inset: 0,
+          border: "none",
+          background: "transparent",
+          padding: 0,
+          cursor: "pointer",
+        }}
+        aria-label="Open image"
+      />
+
+      {url ? (
+        <img
+          src={url}
+          alt="thumb"
+          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+        />
+      ) : null}
     </div>
   );
 }
@@ -265,19 +359,9 @@ class ErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div
-          style={{
-            padding: 16,
-            fontFamily: "Arial",
-            background: "#0F0F10",
-            color: "#fff",
-            minHeight: "100dvh",
-          }}
-        >
+        <div style={{ padding: 16, fontFamily: "Arial", background: "#0F0F10", color: "#fff", minHeight: "100dvh" }}>
           <h2 style={{ marginTop: 0 }}>Nodeflow crashed</h2>
-          <div style={{ opacity: 0.8, whiteSpace: "pre-wrap" }}>
-            {this.state.message}
-          </div>
+          <div style={{ opacity: 0.8, whiteSpace: "pre-wrap" }}>{this.state.message}</div>
         </div>
       );
     }
@@ -285,230 +369,6 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-// ---------- Helpers ----------
-function nearestTargetHandle({ sourceHandle }) {
-  if (sourceHandle === "s-right") return "t-left";
-  if (sourceHandle === "s-left") return "t-right";
-  if (sourceHandle === "s-top") return "t-bottom";
-  if (sourceHandle === "s-bottom") return "t-top";
-  return "t-left";
-}
-
-// === NF-IDB-IMAGES-START ===
-const NF_DB_NAME = "nodeflow_db";
-const NF_DB_VERSION = 1;
-const NF_IMAGES_STORE = "images";
-
-function nfOpenDb() {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(NF_DB_NAME, NF_DB_VERSION);
-
-    req.onupgradeneeded = () => {
-      const db = req.result;
-      if (!db.objectStoreNames.contains(NF_IMAGES_STORE)) {
-        const store = db.createObjectStore(NF_IMAGES_STORE, { keyPath: "id" });
-        store.createIndex("createdAt", "createdAt", { unique: false });
-      }
-    };
-
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
-}
-
-async function nfPutImage(blob) {
-  const db = await nfOpenDb();
-  const id = crypto.randomUUID();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(NF_IMAGES_STORE, "readwrite");
-    tx.oncomplete = () => {
-      db.close();
-      resolve(id);
-    };
-    tx.onerror = () => {
-      const err = tx.error || new Error("IndexedDB tx failed");
-      db.close();
-      reject(err);
-    };
-    tx.objectStore(NF_IMAGES_STORE).put({ id, blob, createdAt: Date.now() });
-  });
-}
-
-async function nfGetImageBlob(id) {
-  const db = await nfOpenDb();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(NF_IMAGES_STORE, "readonly");
-    const req = tx.objectStore(NF_IMAGES_STORE).get(id);
-
-    req.onsuccess = () => {
-      const row = req.result;
-      db.close();
-      resolve(row?.blob || null);
-    };
-    req.onerror = () => {
-      const err = req.error || new Error("IndexedDB get failed");
-      db.close();
-      reject(err);
-    };
-  });
-}
-
-async function nfDeleteImage(id) {
-  const db = await nfOpenDb();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(NF_IMAGES_STORE, "readwrite");
-    const req = tx.objectStore(NF_IMAGES_STORE).delete(id);
-    req.onsuccess = () => {
-      db.close();
-      resolve(true);
-    };
-    req.onerror = () => {
-      const err = req.error || new Error("IndexedDB delete failed");
-      db.close();
-      reject(err);
-    };
-  });
-}
-
-async function nfDownscaleImage(file, maxSide = 1600, quality = 0.82) {
-  try {
-    const img = new Image();
-    const url = URL.createObjectURL(file);
-    await new Promise((res, rej) => {
-      img.onload = res;
-      img.onerror = rej;
-      img.src = url;
-    });
-
-    const w = img.naturalWidth || img.width;
-    const h = img.naturalHeight || img.height;
-
-    const scale = Math.min(1, maxSide / Math.max(w, h));
-    const cw = Math.max(1, Math.round(w * scale));
-    const ch = Math.max(1, Math.round(h * scale));
-
-    const canvas = document.createElement("canvas");
-    canvas.width = cw;
-    canvas.height = ch;
-    const ctx = canvas.getContext("2d");
-    ctx.drawImage(img, 0, 0, cw, ch);
-
-    const blob = await new Promise((resolve) => {
-      canvas.toBlob((b) => resolve(b || file), "image/jpeg", quality);
-    });
-
-    URL.revokeObjectURL(url);
-    return blob;
-  } catch {
-    return file;
-  }
-}
-// === NF-IDB-IMAGES-END ===
-
-// === NF-NODE-IMAGE-THUMB-START ===
-function NodeImageThumb({ imageId, getUrl, onOpen, onDelete }) {
-  const [url, setUrl] = React.useState(null);
-
-  useEffect(() => {
-    let alive = true;
-    (async () => {
-      try {
-        const u = await getUrl(imageId);
-        if (!alive) return;
-        setUrl(u);
-      } catch {
-        if (!alive) return;
-        setUrl(null);
-      }
-    })();
-    return () => {
-      alive = false;
-    };
-  }, [imageId, getUrl]);
-
-  return (
-    <div
-      style={{
-        position: "relative",
-        borderRadius: 12,
-        overflow: "hidden",
-        border: "1px solid rgba(255,255,255,0.12)",
-        background: "rgba(255,255,255,0.06)",
-        aspectRatio: "1 / 1",
-      }}
-    >
-      <button
-        onClick={onDelete}
-        style={{
-          position: "absolute",
-          top: 6,
-          right: 6,
-          zIndex: 2,
-          width: 28,
-          height: 28,
-          borderRadius: 999,
-          border: "1px solid rgba(255,255,255,0.18)",
-          background: "rgba(0,0,0,0.55)",
-          color: "#fff",
-          fontWeight: 900,
-          cursor: "pointer",
-        }}
-        aria-label="Delete image"
-      >
-        ✕
-      </button>
-
-      <button
-        onClick={async () => {
-          if (url) onOpen(url);
-          else {
-            const u = await getUrl(imageId);
-            if (u) onOpen(u);
-          }
-        }}
-        style={{
-          position: "absolute",
-          inset: 0,
-          border: "none",
-          background: "transparent",
-          padding: 0,
-          cursor: "pointer",
-        }}
-        aria-label="Open image"
-      >
-        {url ? (
-          <img
-            src={url}
-            alt="thumb"
-            style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              display: "block",
-            }}
-          />
-        ) : (
-          <div
-            style={{
-              width: "100%",
-              height: "100%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              opacity: 0.7,
-              fontSize: 12,
-            }}
-          >
-            Loading…
-          </div>
-        )}
-      </button>
-    </div>
-  );
-}
-// === NF-NODE-IMAGE-THUMB-END ===
-
-// ---------- App ----------
 function App() {
   const user = tg?.initDataUnsafe?.user;
   const userId = user?.id;
@@ -561,198 +421,47 @@ function App() {
   const [nodes, setNodes] = useState([]);
   const [edges, setEdges] = useState([]);
 
-  // ===== Saved/Unsaved + Debounced autosave =====
-  const [isDirty, setIsDirty] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const saveTimerRef = useRef(null);
-
-  const nodesRef = useRef(nodes);
-  const edgesRef = useRef(edges);
-
-  useEffect(() => {
-    nodesRef.current = nodes;
-  }, [nodes]);
-
-  useEffect(() => {
-    edgesRef.current = edges;
-  }, [edges]);
-
-  const clearSaveTimer = useCallback(() => {
-    if (saveTimerRef.current) {
-      clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = null;
-    }
-  }, []);
-
-  const saveNow = useCallback(() => {
-    if (!gKey) return;
-    clearSaveTimer();
-
-    setIsSaving(true);
-    try {
-      localStorage.setItem(
-        gKey,
-        JSON.stringify({ nodes: nodesRef.current, edges: edgesRef.current })
-      );
-      setIsDirty(false);
-    } catch {
-      setIsDirty(true);
-    } finally {
-      setIsSaving(false);
-    }
-  }, [gKey, clearSaveTimer]);
-
-  const scheduleSave = useCallback(() => {
-    if (!gKey) return;
-
-    setIsDirty(true);
-    setIsSaving(true);
-
-    clearSaveTimer();
-    saveTimerRef.current = setTimeout(() => {
-      try {
-        localStorage.setItem(
-          gKey,
-          JSON.stringify({ nodes: nodesRef.current, edges: edgesRef.current })
-        );
-        setIsDirty(false);
-      } catch {
-        setIsDirty(true);
-      } finally {
-        setIsSaving(false);
-        saveTimerRef.current = null;
-      }
-    }, 700);
-  }, [gKey, clearSaveTimer]);
-
-  useEffect(() => {
-    return () => {
-      if (gKey && (isDirty || isSaving)) {
-        try {
-          localStorage.setItem(
-            gKey,
-            JSON.stringify({ nodes: nodesRef.current, edges: edgesRef.current })
-          );
-        } catch {}
-      }
-      clearSaveTimer();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gKey]);
-
-  // === Undo/Redo engine ===
-  const historyRef = useRef({ past: [], future: [], lastSig: "" });
-  const [historyTick, setHistoryTick] = useState(0);
-
-  const MAX_HISTORY = 60;
-  const deepCopy = (v) => JSON.parse(JSON.stringify(v));
-
-  const makeSig = (n, e) => {
-  const ns = (n || [])
-    .slice()
-    .sort((a, b) => String(a.id).localeCompare(String(b.id)))
-    .map((x) => {
-      const px = Math.round(((x.position?.x ?? 0) * 10)) / 10;
-      const py = Math.round(((x.position?.y ?? 0) * 10)) / 10;
-
-      const d = x.data || {};
-      const title = String(d.title ?? "");
-      const status = String(d.status ?? "");
-      const notes = String(d.notes ?? "");
-      const notesKey = `${notes.length}:${notes.slice(0, 60)}`;
-
-      const img = Array.isArray(d.imageIds) ? d.imageIds.join(",") : "";
-
-      return `${x.id}@${px},${py}|${title}|${status}|${notesKey}|${img}`;
-    })
-    .join("~");
-
-  const es = (e || [])
-    .slice()
-    .sort((a, b) => String(a.id).localeCompare(String(b.id)))
-    .map(
-      (x) =>
-        `${x.id}:${x.source}:${x.target}:${x.sourceHandle || ""}:${x.targetHandle || ""}`
-    )
-    .join("~");
-
-  return `${ns}||${es}`;
-};
-
-
-  const pushHistory = useCallback(
-    (nextNodes, nextEdges) => {
-      const h = historyRef.current;
-      const sig = makeSig(nextNodes, nextEdges);
-      if (sig === h.lastSig) return;
-
-      h.past.push({ nodes: deepCopy(nodes), edges: deepCopy(edges) });
-      if (h.past.length > MAX_HISTORY) h.past.shift();
-
-      h.future = [];
-      h.lastSig = sig;
-      setHistoryTick((t) => t + 1);
-    },
-    [nodes, edges]
-  );
-
-  const undo = useCallback(() => {
-    const h = historyRef.current;
-    if (!h.past.length) return;
-
-    const prev = h.past.pop();
-    h.future.push({ nodes: deepCopy(nodes), edges: deepCopy(edges) });
-
-    setNodes(prev.nodes);
-    setEdges(prev.edges);
-    h.lastSig = makeSig(prev.nodes, prev.edges);
-    setHistoryTick((t) => t + 1);
-    scheduleSave();
-  }, [nodes, edges, scheduleSave]);
-
-  const redo = useCallback(() => {
-    const h = historyRef.current;
-    if (!h.future.length) return;
-
-    const next = h.future.pop();
-    h.past.push({ nodes: deepCopy(nodes), edges: deepCopy(edges) });
-
-    setNodes(next.nodes);
-    setEdges(next.edges);
-    h.lastSig = makeSig(next.nodes, next.edges);
-    setHistoryTick((t) => t + 1);
-    scheduleSave();
-  }, [nodes, edges, scheduleSave]);
-
-  const canUndo = useMemo(() => historyRef.current.past.length > 0, [historyTick]);
-  const canRedo = useMemo(() => historyRef.current.future.length > 0, [historyTick]);
-
   const [selectedNodeId, setSelectedNodeId] = useState(null);
   const [selectedEdgeId, setSelectedEdgeId] = useState(null);
 
   const [linkMode, setLinkMode] = useState(false);
-  const [showMiniMap, setShowMiniMap] = useState(true);
   const [showControls, setShowControls] = useState(true);
-  const [isNotesFullscreen, setIsNotesFullscreen] = useState(false);
+
+  // bottom sheet collapse (IMPORTANT FIX)
+  const [isDetailsCollapsed, setIsDetailsCollapsed] = useState(false);
+
+  // preview / modals
+  const [previewUrl, setPreviewUrl] = useState(null);
   const [isPreviewExpanded, setIsPreviewExpanded] = useState(false);
+  const [isNotesFullscreen, setIsNotesFullscreen] = useState(false);
 
-  
+  // file input
+  const fileInputRef = useRef(null);
 
-  
-
+  // ReactFlow refs
   const rfRef = useRef(null);
   const didFitRef = useRef(false);
 
-  // === Node details (notes + images) state ===
-  const [previewUrl, setPreviewUrl] = useState(null);
-  
+  // "saved" chip
+  const [saveState, setSaveState] = useState("saved"); // "saved" | "saving"
+  const saveTimerRef = useRef(null);
 
+  const scheduleSave = useCallback(() => {
+    setSaveState("saving");
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      setSaveState("saved");
+    }, 350);
+  }, []);
 
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    };
+  }, []);
 
-
+  // image url cache
   const imageUrlCacheRef = useRef(new Map());
-  const fileInputRef = useRef(null);
-
   const getImageObjectUrl = useCallback(async (imageId) => {
     const cache = imageUrlCacheRef.current;
     if (cache.has(imageId)) return cache.get(imageId);
@@ -768,66 +477,28 @@ function App() {
   const revokeImageUrl = useCallback((imageId) => {
     const cache = imageUrlCacheRef.current;
     const url = cache.get(imageId);
-    if (url) {
-      URL.revokeObjectURL(url);
-      cache.delete(imageId);
-    }
+    if (url) URL.revokeObjectURL(url);
+    cache.delete(imageId);
   }, []);
 
+  // modal helpers (avoid overlay stacking)
   const openPreview = useCallback((url) => {
-  setIsNotesFullscreen(false);      // чтобы notes не мешал
-  setIsPreviewExpanded(false);      // сначала обычный размер
-  setPreviewUrl(url);
-}, []);
-
-const closePreview = useCallback(() => {
-  setPreviewUrl(null);
-  setIsPreviewExpanded(false);
-}, []);
-
-
-const openNotesFullscreen = useCallback(() => {
-  setPreviewUrl(null);
-  setIsPreviewExpanded(false);
-  setIsNotesFullscreen(true);
-}, []);
-
-const closeNotesFullscreen = useCallback(() => {
-  setIsNotesFullscreen(false);
-}, []);
-
-
-
-  useEffect(() => {
-    return () => {
-      const cache = imageUrlCacheRef.current;
-      for (const url of cache.values()) URL.revokeObjectURL(url);
-      cache.clear();
-    };
-  }, [gKey]);
-
-  const nodeTypes = useMemo(
-    () => ({
-      card: (props) => <NodeCard {...props} linkMode={linkMode} />,
-    }),
-    [linkMode]
-  );
-
-  const edgeTypes = useMemo(() => ({ nf: NodeflowEdge }), []);
-
-  // reset on project switch
-  useEffect(() => {
-    didFitRef.current = false;
-    historyRef.current = { past: [], future: [], lastSig: "" };
-    setHistoryTick((t) => t + 1);
-
-    clearSaveTimer();
-    setIsDirty(false);
-    setIsSaving(false);
+    setIsNotesFullscreen(false);
+    setIsPreviewExpanded(false);
+    setPreviewUrl(url);
+  }, []);
+  const closePreview = useCallback(() => {
     setPreviewUrl(null);
-    setIsDetailsCollapsed(false);
-
-  }, [gKey, clearSaveTimer]);
+    setIsPreviewExpanded(false);
+  }, []);
+  const openNotesFullscreen = useCallback(() => {
+    setPreviewUrl(null);
+    setIsPreviewExpanded(false);
+    setIsNotesFullscreen(true);
+  }, []);
+  const closeNotesFullscreen = useCallback(() => {
+    setIsNotesFullscreen(false);
+  }, []);
 
   // load graph
   useEffect(() => {
@@ -838,49 +509,59 @@ const closeNotesFullscreen = useCallback(() => {
       if (!raw) {
         setNodes([]);
         setEdges([]);
-        setIsDirty(false);
-        setIsSaving(false);
-        return;
+      } else {
+        const data = JSON.parse(raw);
+
+        const safeNodes = (Array.isArray(data.nodes) ? data.nodes : []).map((n) => {
+          const x = Number(n?.position?.x);
+          const y = Number(n?.position?.y);
+
+          const title = n?.data?.title || "New step";
+          const status = n?.data?.status || "idea";
+          const notes = typeof n?.data?.notes === "string" ? n.data.notes : "";
+          const imageIds = Array.isArray(n?.data?.imageIds) ? n.data.imageIds : [];
+
+          return {
+            ...n,
+            position: { x: Number.isFinite(x) ? x : 40, y: Number.isFinite(y) ? y : 40 },
+            data: { title, status, notes, imageIds },
+            type: n?.type || "card",
+          };
+        });
+
+        const safeEdges = (Array.isArray(data.edges) ? data.edges : [])
+          .filter((e) => e && e.id && e.source && e.target)
+          .map((e) => ({ ...e, type: "nf" }));
+
+        setNodes(safeNodes);
+        setEdges(safeEdges);
       }
-
-      const data = JSON.parse(raw);
-
-      const safeNodes = (Array.isArray(data.nodes) ? data.nodes : []).map((n) => {
-        const x = Number(n?.position?.x);
-        const y = Number(n?.position?.y);
-        return {
-          ...n,
-          position: { x: Number.isFinite(x) ? x : 40, y: Number.isFinite(y) ? y : 40 },
-          data: {
-            title: n?.data?.title || "New step",
-            status: n?.data?.status || "idea",
-            notes: typeof n?.data?.notes === "string" ? n.data.notes : "",
-            imageIds: Array.isArray(n?.data?.imageIds) ? n.data.imageIds : [],
-          },
-          type: n?.type || "card",
-        };
-      });
-
-      const safeEdges = (Array.isArray(data.edges) ? data.edges : [])
-        .filter((e) => e && e.id && e.source && e.target)
-        .map((e) => ({ ...e, type: "nf" }));
-
-      setNodes(safeNodes);
-      setEdges(safeEdges);
-      setIsDirty(false);
-      setIsSaving(false);
     } catch {
       setNodes([]);
       setEdges([]);
-      setIsDirty(false);
-      setIsSaving(false);
     }
 
     setSelectedNodeId(null);
     setSelectedEdgeId(null);
-  }, [gKey]);
+    setIsDetailsCollapsed(false);
+    setPreviewUrl(null);
+    setIsPreviewExpanded(false);
+    setIsNotesFullscreen(false);
 
-  // fitView once
+    // clear old cached urls (safe)
+    for (const [id] of imageUrlCacheRef.current.entries()) revokeImageUrl(id);
+  }, [gKey, revokeImageUrl]);
+
+  // save graph
+  useEffect(() => {
+    if (!gKey) return;
+    try {
+      localStorage.setItem(gKey, JSON.stringify({ nodes, edges }));
+      scheduleSave();
+    } catch {}
+  }, [gKey, nodes, edges, scheduleSave]);
+
+  // fit view once per project
   useEffect(() => {
     if (!gKey) return;
     if (didFitRef.current) return;
@@ -892,85 +573,29 @@ const closeNotesFullscreen = useCallback(() => {
     });
   }, [gKey, nodes.length]);
 
-  // hotkeys
-  useEffect(() => {
-    const handler = (e) => {
-      const isMac = /Mac|iPhone|iPad/.test(navigator.platform);
-      const mod = isMac ? e.metaKey : e.ctrlKey;
-      if (!mod) return;
-
-      const key = e.key.toLowerCase();
-
-      if (key === "z" && !e.shiftKey) {
-        e.preventDefault();
-        undo();
-      }
-      if (key === "z" && e.shiftKey) {
-        e.preventDefault();
-        redo();
-      }
-    };
-
-    window.addEventListener("keydown", handler, { passive: false });
-    return () => window.removeEventListener("keydown", handler);
-  }, [undo, redo]);
-
-  // handlers
+  // node/edge handlers
   const onNodesChange = useCallback(
-  (changes) => {
-    // ВАЖНО:
-    // - во время drag приходит много position-изменений
-    // - нам нужен 1 шаг истории на 1 перетаскивание => пишем только когда dragging === false
-    const shouldCommit = changes.some((c) => {
-      if (c.type === "position") return c.dragging === false;
-      if (c.type === "remove" || c.type === "add") return true;
-      // dimensions можно оставить, но обычно не нужно:
-      // if (c.type === "dimensions") return true;
-      return false;
-    });
-
-    setNodes((nds) => {
-      const next = applyNodeChanges(changes, nds);
-      if (shouldCommit) pushHistory(next, edges);
-      return next;
-    });
-
-    if (shouldCommit) scheduleSave();
-  },
-  [pushHistory, edges, scheduleSave]
-);
-
+    (changes) => {
+      setNodes((nds) => applyNodeChanges(changes, nds));
+    },
+    []
+  );
 
   const onEdgesChange = useCallback(
     (changes) => {
-      const meaningful = changes.some((c) => c.type === "remove" || c.type === "add");
-
-      setEdges((eds) => {
-        const next = applyEdgeChanges(changes, eds);
-        if (meaningful) pushHistory(nodes, next);
-        return next;
-      });
-
-      if (meaningful) scheduleSave();
+      setEdges((eds) => applyEdgeChanges(changes, eds));
     },
-    [pushHistory, nodes, scheduleSave]
+    []
   );
 
   const onConnect = useCallback(
     (params) => {
-      setEdges((eds) => {
-        const next = addEdge(params, eds);
-        pushHistory(nodes, next);
-        return next;
-      });
-      scheduleSave();
+      setEdges((eds) => addEdge({ ...params, type: "nf" }, eds));
     },
-    [pushHistory, nodes, scheduleSave]
+    []
   );
 
   function addNode() {
-    pushHistory(nodes, edges);
-
     const id = crypto.randomUUID();
     const newNode = {
       id,
@@ -980,8 +605,8 @@ const closeNotesFullscreen = useCallback(() => {
     };
     setNodes((prev) => [newNode, ...prev]);
     setSelectedNodeId(id);
+    setSelectedEdgeId(null);
     didFitRef.current = false;
-    scheduleSave();
   }
 
   const selectedNode = useMemo(
@@ -991,139 +616,93 @@ const closeNotesFullscreen = useCallback(() => {
 
   function updateSelectedNode(patch) {
     if (!selectedNodeId) return;
-    pushHistory(nodes, edges);
-
     setNodes((prev) =>
       prev.map((n) => (n.id !== selectedNodeId ? n : { ...n, data: { ...n.data, ...patch } }))
     );
-
-    didFitRef.current = false;
     scheduleSave();
   }
 
-  function updateSelectedNodeNotes(nextNotes, { commit = false } = {}) {
-  if (!selectedNodeId) return;
-
-  // Историю пишем только "commit" (например, когда ушли из поля)
-  if (commit) pushHistory(nodes, edges);
-
-  setNodes((prev) =>
-    prev.map((n) =>
-      n.id !== selectedNodeId
-        ? n
-        : { ...n, data: { ...n.data, notes: String(nextNotes ?? "") } }
-    )
-  );
-
-  scheduleSave();
-}
-
+  function updateSelectedNodeNotes(nextNotes) {
+    if (!selectedNodeId) return;
+    setNodes((prev) =>
+      prev.map((n) =>
+        n.id !== selectedNodeId ? n : { ...n, data: { ...n.data, notes: String(nextNotes ?? "") } }
+      )
+    );
+    scheduleSave();
+  }
 
   async function addImagesToSelectedNode(files) {
     if (!selectedNodeId) return;
     if (!files || files.length === 0) return;
 
-    const MAX_IMAGES_PER_NODE = 10;
-
-    const current = nodes.find((n) => n.id === selectedNodeId);
-    const existing = Array.isArray(current?.data?.imageIds) ? current.data.imageIds : [];
-    if (existing.length >= MAX_IMAGES_PER_NODE) return;
-
-    pushHistory(nodes, edges);
-
-    const toAdd = Array.from(files).slice(0, Math.max(0, MAX_IMAGES_PER_NODE - existing.length));
-
-    try {
-      const newIds = [];
-      for (const f of toAdd) {
-        const downscaled = await nfDownscaleImage(f, 1600, 0.82);
-        const id = await nfPutImage(downscaled);
-        newIds.push(id);
-      }
-
-      setNodes((prev) =>
-        prev.map((n) => {
-          if (n.id !== selectedNodeId) return n;
-          const prevIds = Array.isArray(n?.data?.imageIds) ? n.data.imageIds : [];
-          return { ...n, data: { ...n.data, imageIds: [...prevIds, ...newIds] } };
-        })
-      );
-
-      scheduleSave();
-    } catch (e) {
-      console.log("addImagesToSelectedNode error:", e);
+    const ids = [];
+    for (const f of files) {
+      const id = crypto.randomUUID();
+      const blob = await nfDownscaleImage(f);
+      await nfPutImage(id, blob);
+      ids.push(id);
     }
+
+    setNodes((prev) =>
+      prev.map((n) => {
+        if (n.id !== selectedNodeId) return n;
+        const curr = Array.isArray(n.data?.imageIds) ? n.data.imageIds : [];
+        return { ...n, data: { ...n.data, imageIds: [...curr, ...ids] } };
+      })
+    );
+    scheduleSave();
   }
 
   async function deleteImageFromSelectedNode(imageId) {
-    if (!selectedNodeId || !imageId) return;
+    if (!selectedNodeId) return;
 
-    pushHistory(nodes, edges);
+    setNodes((prev) =>
+      prev.map((n) => {
+        if (n.id !== selectedNodeId) return n;
+        const curr = Array.isArray(n.data?.imageIds) ? n.data.imageIds : [];
+        return { ...n, data: { ...n.data, imageIds: curr.filter((x) => x !== imageId) } };
+      })
+    );
 
     try {
-      setNodes((prev) =>
-        prev.map((n) => {
-          if (n.id !== selectedNodeId) return n;
-          const prevIds = Array.isArray(n?.data?.imageIds) ? n.data.imageIds : [];
-          return { ...n, data: { ...n.data, imageIds: prevIds.filter((id) => id !== imageId) } };
-        })
-      );
-
       await nfDeleteImage(imageId);
-      revokeImageUrl(imageId);
-      scheduleSave();
-    } catch (e) {
-      console.log("deleteImageFromSelectedNode error:", e);
-    }
+    } catch {}
+    revokeImageUrl(imageId);
+
+    scheduleSave();
   }
 
   function deleteSelectedNode() {
     if (!selectedNodeId) return;
-    pushHistory(nodes, edges);
-
-    const removingId = selectedNodeId;
-    const current = nodes.find((n) => n.id === removingId);
-    const imgs = Array.isArray(current?.data?.imageIds) ? current.data.imageIds : [];
-
-    setNodes((prev) => prev.filter((n) => n.id !== removingId));
-    setEdges((prev) => prev.filter((e) => e.source !== removingId && e.target !== removingId));
+    setNodes((prev) => prev.filter((n) => n.id !== selectedNodeId));
+    setEdges((prev) => prev.filter((e) => e.source !== selectedNodeId && e.target !== selectedNodeId));
     setSelectedNodeId(null);
-
-    didFitRef.current = false;
+    setSelectedEdgeId(null);
+    setIsDetailsCollapsed(false);
     scheduleSave();
-
-    // best-effort cleanup blobs
-    (async () => {
-      try {
-        for (const id of imgs) {
-          await nfDeleteImage(id);
-          revokeImageUrl(id);
-        }
-      } catch {}
-    })();
   }
 
   function deleteSelectedEdge() {
     if (!selectedEdgeId) return;
-    pushHistory(nodes, edges);
-
     setEdges((prev) => prev.filter((e) => e.id !== selectedEdgeId));
     setSelectedEdgeId(null);
     scheduleSave();
   }
 
+  const nodeTypes = useMemo(
+    () => ({
+      card: (props) => <NodeCard {...props} linkMode={linkMode} />,
+    }),
+    [linkMode]
+  );
+
+  const edgeTypes = useMemo(() => ({ nf: NodeflowEdge }), []);
+
   // ---------- UI: Projects ----------
   if (!currentProject) {
     return (
-      <div
-        style={{
-          padding: 16,
-          fontFamily: "Arial, sans-serif",
-          background: "#0F0F10",
-          minHeight: "100dvh",
-          color: "#FFFFFF",
-        }}
-      >
+      <div style={{ padding: 16, fontFamily: "Arial, sans-serif", background: "#0F0F10", minHeight: "100dvh", color: "#FFFFFF" }}>
         <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
           <h1 style={{ margin: 0 }}>Nodeflow</h1>
           <span style={{ opacity: 0.6, fontSize: 12 }}>
@@ -1211,23 +790,6 @@ const closeNotesFullscreen = useCallback(() => {
   }
 
   // ---------- UI: Canvas ----------
-  const saveLabel = isSaving ? "Saving…" : isDirty ? "Unsaved" : "Saved";
-  const saveChipBg = isSaving
-    ? "rgba(111,66,255,0.18)"
-    : isDirty
-      ? "rgba(255,180,0,0.18)"
-      : "rgba(0,255,160,0.14)";
-  const saveChipBorder = isSaving
-    ? "rgba(111,66,255,0.35)"
-    : isDirty
-      ? "rgba(255,180,0,0.35)"
-      : "rgba(0,255,160,0.30)";
-  const saveChipText = isSaving
-    ? "rgba(210,200,255,1)"
-    : isDirty
-      ? "rgba(255,220,150,1)"
-      : "rgba(160,255,220,1)";
-
   return (
     <div style={{ height: "100dvh", display: "flex", flexDirection: "column", position: "relative" }}>
       {/* Top bar */}
@@ -1246,10 +808,7 @@ const closeNotesFullscreen = useCallback(() => {
       >
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <button
-            onClick={() => {
-              if (isDirty || isSaving) saveNow();
-              setCurrentProject(null);
-            }}
+            onClick={() => setCurrentProject(null)}
             style={{
               padding: "8px 10px",
               borderRadius: 10,
@@ -1261,29 +820,21 @@ const closeNotesFullscreen = useCallback(() => {
             ← Back
           </button>
 
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <div style={{ fontWeight: 800 }}>{currentProject.title}</div>
-
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ fontWeight: 900 }}>{currentProject.title}</div>
             <div
               style={{
-                fontSize: 12,
-                padding: "4px 8px",
+                padding: "6px 10px",
                 borderRadius: 999,
-                border: `1px solid ${saveChipBorder}`,
-                background: saveChipBg,
-                color: saveChipText,
-                fontWeight: 800,
+                border: "1px solid rgba(255,255,255,0.10)",
+                background: saveState === "saved" ? "rgba(16,185,129,0.18)" : "rgba(255,255,255,0.08)",
+                color: saveState === "saved" ? "#34D399" : "rgba(255,255,255,0.75)",
+                fontSize: 12,
+                fontWeight: 900,
               }}
-              title="Autosave status"
             >
-              {saveLabel}
+              {saveState === "saved" ? "Saved" : "Saving"}
             </div>
-
-            {linkMode && (
-              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.65)" }}>
-                Link mode ON
-              </div>
-            )}
           </div>
         </div>
 
@@ -1301,8 +852,6 @@ const closeNotesFullscreen = useCallback(() => {
           >
             Link
           </button>
-
-          
 
           <button
             onClick={addNode}
@@ -1322,48 +871,6 @@ const closeNotesFullscreen = useCallback(() => {
 
       {/* Canvas */}
       <div style={{ flex: 1, background: "#0F0F10", touchAction: "none", position: "relative" }}>
-        {/* Undo/Redo */}
-        <div
-          style={{
-            position: "absolute",
-            top: 12,
-            left: 12,
-            zIndex: 50,
-            display: "flex",
-            gap: 8,
-          }}
-        >
-          <button
-            onClick={undo}
-            disabled={!canUndo}
-            style={{
-              padding: "8px 10px",
-              borderRadius: 10,
-              border: "1px solid rgba(255,255,255,0.12)",
-              background: "rgba(0,0,0,0.35)",
-              color: "white",
-              opacity: canUndo ? 1 : 0.5,
-            }}
-          >
-            Undo
-          </button>
-
-          <button
-            onClick={redo}
-            disabled={!canRedo}
-            style={{
-              padding: "8px 10px",
-              borderRadius: 10,
-              border: "1px solid rgba(255,255,255,0.12)",
-              background: "rgba(0,0,0,0.35)",
-              color: "white",
-              opacity: canRedo ? 1 : 0.5,
-            }}
-          >
-            Redo
-          </button>
-        </div>
-
         {/* Hidden input */}
         <input
           ref={fileInputRef}
@@ -1371,172 +878,165 @@ const closeNotesFullscreen = useCallback(() => {
           accept="image/*"
           multiple
           style={{ display: "none" }}
-          onChange={(e) => {
-            const files = e.target.files;
-            if (files && files.length) addImagesToSelectedNode(files);
+          onChange={async (e) => {
+            const files = Array.from(e.target.files || []);
             e.target.value = "";
+            await addImagesToSelectedNode(files);
           }}
         />
 
+        {/* Preview modal */}
+        {previewUrl && (
+          <div
+            onClick={closePreview}
+            style={{
+              position: "absolute",
+              inset: 0,
+              zIndex: 260,
+              background: "rgba(0,0,0,0.72)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: isPreviewExpanded ? 0 : 16,
+            }}
+          >
+            <div
+              onClick={(ev) => ev.stopPropagation()}
+              style={{
+                position: "relative",
+                width: isPreviewExpanded ? "100vw" : "min(92vw, 520px)",
+                height: isPreviewExpanded ? "100dvh" : "auto",
+                maxHeight: isPreviewExpanded ? "100dvh" : "72dvh",
+                borderRadius: isPreviewExpanded ? 0 : 18,
+                overflow: "hidden",
+                border: "1px solid rgba(255,255,255,0.14)",
+                background: "rgba(0,0,0,0.35)",
+              }}
+            >
+              <div
+                style={{
+                  position: "absolute",
+                  top: 10,
+                  right: 10,
+                  zIndex: 5,
+                  display: "flex",
+                  gap: 8,
+                }}
+              >
+                <button
+                  onClick={closePreview}
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 12,
+                    border: "1px solid rgba(255,255,255,0.18)",
+                    background: "rgba(0,0,0,0.55)",
+                    color: "#fff",
+                    fontWeight: 900,
+                    cursor: "pointer",
+                  }}
+                  aria-label="Close image"
+                  title="Close"
+                >
+                  ✕
+                </button>
 
+                <button
+                  onClick={() => setIsPreviewExpanded((v) => !v)}
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 12,
+                    border: "1px solid rgba(255,255,255,0.18)",
+                    background: "rgba(0,0,0,0.55)",
+                    color: "#fff",
+                    fontWeight: 900,
+                    cursor: "pointer",
+                  }}
+                  aria-label="Toggle expand"
+                  title={isPreviewExpanded ? "Minimize" : "Expand"}
+                >
+                  ⤢
+                </button>
+              </div>
 
-    {/* Preview modal */}
-{previewUrl && (
-  <div
-    onClick={closePreview}
-    style={{
-      position: "absolute",
-      inset: 0,
-      zIndex: 260,
-      background: "rgba(0,0,0,0.72)",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      padding: isPreviewExpanded ? 0 : 16,
-    }}
-  >
-    <div
-      onClick={(ev) => ev.stopPropagation()}
-      style={{
-        position: "relative",
-        width: isPreviewExpanded ? "100vw" : "min(92vw, 520px)",
-        height: isPreviewExpanded ? "100dvh" : "auto",
-        maxHeight: isPreviewExpanded ? "100dvh" : "72dvh",
-        borderRadius: isPreviewExpanded ? 0 : 18,
-        overflow: "hidden",
-        border: "1px solid rgba(255,255,255,0.14)",
-        background: "rgba(0,0,0,0.35)",
-      }}
-    >
-      {/* buttons */}
-      <div
-        style={{
-          position: "absolute",
-          top: 10,
-          right: 10,
-          zIndex: 5,
-          display: "flex",
-          gap: 8,
-        }}
-      >
-        <button
-          onClick={closePreview}
-          style={{
-            width: 36,
-            height: 36,
-            borderRadius: 12,
-            border: "1px solid rgba(255,255,255,0.18)",
-            background: "rgba(0,0,0,0.55)",
-            color: "#fff",
-            fontWeight: 900,
-            cursor: "pointer",
-          }}
-          aria-label="Close image"
-          title="Close"
-        >
-          ✕
-        </button>
+              <img
+                src={previewUrl}
+                alt="preview"
+                style={{
+                  width: "100%",
+                  height: isPreviewExpanded ? "100%" : "auto",
+                  maxHeight: isPreviewExpanded ? "100%" : "72dvh",
+                  objectFit: "contain",
+                  display: "block",
+                }}
+              />
+            </div>
+          </div>
+        )}
 
-        <button
-          onClick={() => setIsPreviewExpanded((v) => !v)}
-          style={{
-            width: 36,
-            height: 36,
-            borderRadius: 12,
-            border: "1px solid rgba(255,255,255,0.18)",
-            background: "rgba(0,0,0,0.55)",
-            color: "#fff",
-            fontWeight: 900,
-            cursor: "pointer",
-          }}
-          aria-label="Toggle expand"
-          title={isPreviewExpanded ? "Minimize" : "Expand"}
-        >
-          ⤢
-        </button>
-      </div>
+        {/* Notes fullscreen modal */}
+        {isNotesFullscreen && selectedNode && (
+          <div
+            onClick={closeNotesFullscreen}
+            style={{
+              position: "absolute",
+              inset: 0,
+              zIndex: 300,
+              background: "rgba(0,0,0,0.86)",
+              display: "flex",
+              flexDirection: "column",
+              padding: 14,
+              gap: 12,
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ color: "#fff", fontWeight: 900, fontSize: 16 }}>Notes</div>
 
-      <img
-        src={previewUrl}
-        alt="preview"
-        style={{
-          width: "100%",
-          height: isPreviewExpanded ? "100%" : "auto",
-          maxHeight: isPreviewExpanded ? "100%" : "72dvh",
-          objectFit: "contain",
-          display: "block",
-        }}
-      />
-    </div>
-  </div>
-)}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  closeNotesFullscreen();
+                }}
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 12,
+                  border: "1px solid rgba(255,255,255,0.18)",
+                  background: "rgba(0,0,0,0.55)",
+                  color: "#fff",
+                  fontWeight: 900,
+                  cursor: "pointer",
+                }}
+                aria-label="Close notes"
+                title="Close"
+              >
+                ✕
+              </button>
+            </div>
 
-{/* Notes fullscreen modal */}
-{isNotesFullscreen && selectedNode && (
-  <div
-    onClick={closeNotesFullscreen}
-    style={{
-      position: "absolute",
-      inset: 0,
-      zIndex: 300,
-      background: "rgba(0,0,0,0.86)",
-      display: "flex",
-      flexDirection: "column",
-      padding: 14,
-      gap: 12,
-    }}
-  >
-
-    
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-      <div style={{ color: "#fff", fontWeight: 900, fontSize: 16 }}>Notes</div>
-
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          closeNotesFullscreen();
-        }}
-        style={{
-          width: 40,
-          height: 40,
-          borderRadius: 12,
-          border: "1px solid rgba(255,255,255,0.18)",
-          background: "rgba(0,0,0,0.55)",
-          color: "#fff",
-          fontWeight: 900,
-          cursor: "pointer",
-        }}
-        aria-label="Close notes"
-        title="Close"
-      >
-        ✕
-      </button>
-    </div>
-
-    <textarea
-      value={selectedNode.data?.notes || ""}
-      onChange={(e) => updateSelectedNodeNotes(e.target.value, { commit: false })}
-      onBlur={(e) => updateSelectedNodeNotes(e.target.value, { commit: true })}
-      placeholder="Notes"
-      style={{
-        flex: 1,
-        width: "100%",
-        padding: 12,
-        borderRadius: 14,
-        border: "1px solid rgba(255,255,255,0.16)",
-        outline: "none",
-        background: "#ffffff",
-        color: "#111111",
-        fontSize: 16,
-        lineHeight: 1.4,
-        resize: "none",
-        fontFamily: "Arial, sans-serif",
-      }}
-      onClick={(e) => e.stopPropagation()}
-    />
-  </div>
-)}
-
+            <textarea
+              value={selectedNode.data?.notes || ""}
+              onChange={(e) => updateSelectedNodeNotes(e.target.value)}
+              placeholder="Notes"
+              style={{
+                flex: 1,
+                width: "100%",
+                padding: 12,
+                borderRadius: 14,
+                border: "1px solid rgba(255,255,255,0.16)",
+                outline: "none",
+                background: "#ffffff",
+                color: "#111111",
+                fontSize: 16,
+                lineHeight: 1.4,
+                resize: "none",
+                fontFamily: "Arial, sans-serif",
+              }}
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+        )}
 
         <ReactFlow
           nodes={nodes}
@@ -1554,6 +1054,11 @@ const closeNotesFullscreen = useCallback(() => {
           onConnect={onConnect}
           onNodeClick={(_, node) => {
             setSelectedNodeId(node.id);
+            setSelectedEdgeId(null);
+            setIsDetailsCollapsed(false);
+          }}
+          onPaneClick={() => {
+            setSelectedNodeId(null);
             setSelectedEdgeId(null);
           }}
           onEdgeClick={(_, edge) => {
@@ -1615,83 +1120,55 @@ const closeNotesFullscreen = useCallback(() => {
       </div>
 
       {/* Bottom sheet */}
-<div
-  style={{
-    padding: 12,
-    borderTop: `1px solid ${theme.border}`,
-    fontFamily: "Arial, sans-serif",
-    background: "#111111",
-    color: "#FFFFFF",
-    maxHeight: isDetailsCollapsed ? 56 : "46dvh",
-    paddingTop: 22,
-overflow: "visible",
-
-    overflowY: isDetailsCollapsed ? "hidden" : "auto",
-    WebkitOverflowScrolling: "touch",
-    transition: "max-height 180ms ease",
-    position: "relative",
-  }}
->
-
-{selectedNode && (
-  <button
-    onClick={() => setIsDetailsCollapsed((v) => !v)}
-    style={{
-      position: "absolute",
-      top: 11,
-      left: "50%",
-      transform: "translateX(-50%)",
-      height: 28,
-      width: 56,
-      borderRadius: 12,
-      border: "1px solid rgba(255,255,255,0.14)",
-      background: "rgba(21,21,23,0.92)",
-      color: "rgba(255,255,255,0.85)",
-      fontWeight: 900,
-      cursor: "pointer",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      zIndex: 30,
-    }}
-    aria-label={isDetailsCollapsed ? "Expand panel" : "Collapse panel"}
-    title={isDetailsCollapsed ? "Expand" : "Collapse"}
-  >
-    {isDetailsCollapsed ? "▴" : "▾"}
-  </button>
-)}
-
-
-
+      <div
+        style={{
+          padding: 12,
+          borderTop: `1px solid ${theme.border}`,
+          fontFamily: "Arial, sans-serif",
+          background: "#111111",
+          color: "#FFFFFF",
+          maxHeight: isDetailsCollapsed ? 56 : "46dvh",
+          overflowY: isDetailsCollapsed ? "hidden" : "auto",
+          WebkitOverflowScrolling: "touch",
+          transition: "max-height 180ms ease",
+          position: "relative",
+        }}
+      >
+        {/* toggle button (only when node selected) */}
+        {selectedNode && (
+          <button
+            onClick={() => setIsDetailsCollapsed((v) => !v)}
+            style={{
+              position: "absolute",
+              top: 8,
+              left: "50%",
+              transform: "translateX(-50%)",
+              height: 28,
+              width: 56,
+              borderRadius: 12,
+              border: "1px solid rgba(255,255,255,0.14)",
+              background: "rgba(21,21,23,0.92)",
+              color: "rgba(255,255,255,0.85)",
+              fontWeight: 900,
+              cursor: "pointer",
+              display: explain,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 30,
+            }}
+            aria-label={isDetailsCollapsed ? "Expand panel" : "Collapse panel"}
+            title={isDetailsCollapsed ? "Expand" : "Collapse"}
+          >
+            {isDetailsCollapsed ? "▴" : "▾"}
+          </button>
+        )}
 
         {isDetailsCollapsed ? null : !selectedNode ? (
-
-          selectedEdgeId && linkMode ? (
-            <div style={{ display: "grid", gap: 10 }}>
-              <div style={{ opacity: 0.65 }}>Link selected.</div>
-              <button
-                onClick={deleteSelectedEdge}
-                style={{
-                  padding: "10px 8px",
-                  borderRadius: 10,
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  background: "#151517",
-                  color: "#FFFFFF",
-                  fontWeight: 800,
-                }}
-              >
-                Delete link
-              </button>
-              <div style={{ opacity: 0.6, fontSize: 12 }}>
-                Tip: tap another link to switch, or turn off Link mode.
-              </div>
-            </div>
-          ) : (
-            <div style={{ opacity: 0.65 }}>Tap a node to edit.</div>
-          )
+          <div style={{ opacity: 0.65, paddingTop: 8 }}>Tap a node to edit.</div>
         ) : (
-          <div style={{ display: "grid", gap: 8 }}>
-            <div style={{ fontWeight: 800 }}>Node</div>
+          <div style={{ display: "grid", gap: 10, paddingTop: 26 }}>
+            <div style={{ fontWeight: 900 }}>Node</div>
 
             <input
               value={selectedNode.data?.title || ""}
@@ -1708,54 +1185,51 @@ overflow: "visible",
             />
 
             {/* Notes */}
-<div style={{ position: "relative" }}>
-  <textarea
-    value={selectedNode.data?.notes || ""}
-    onChange={(e) => updateSelectedNodeNotes(e.target.value, { commit: false })}
-    onBlur={(e) => updateSelectedNodeNotes(e.target.value, { commit: true })}
-    placeholder="Notes (internal text, not shown on the node)"
-    rows={5}
-    style={{
-      padding: 10,
-      borderRadius: 10,
-      border: "1px solid rgba(255,255,255,0.12)",
-      outline: "none",
-      background: "#FFFFFF",
-      color: "#111111",
-      resize: "vertical",
-      fontFamily: "Arial, sans-serif",
-      width: "100%",
-      boxSizing: "border-box",
-    }}
-  />
+            <div style={{ position: "relative" }}>
+              <textarea
+                value={selectedNode.data?.notes || ""}
+                onChange={(e) => updateSelectedNodeNotes(e.target.value)}
+                placeholder="Notes (internal text, not shown on the node)"
+                rows={5}
+                style={{
+                  padding: 10,
+                  borderRadius: 10,
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  outline: "none",
+                  background: "#FFFFFF",
+                  color: "#111111",
+                  resize: "vertical",
+                  fontFamily: "Arial, sans-serif",
+                  width: "100%",
+                  boxSizing: "border-box",
+                }}
+              />
 
-  {/* fullscreen button (bottom-left) */}
-  <button
-    onOpen={(url) => openPreview(url)}
-
-    style={{
-      position: "absolute",
-      left: 8,
-      bottom: 8,
-      width: 34,
-      height: 34,
-      borderRadius: 10,
-      border: "1px solid rgba(0,0,0,0.12)",
-      background: "rgba(255,255,255,0.88)",
-      color: "#111",
-      fontWeight: 900,
-      cursor: "pointer",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-    }}
-    aria-label="Fullscreen notes"
-    title="Fullscreen"
-  >
-    ⤢
-  </button>
-</div>
-
+              {/* fullscreen button (bottom-left) */}
+              <button
+                onClick={openNotesFullscreen}
+                style={{
+                  position: "absolute",
+                  left: 8,
+                  bottom: 8,
+                  width: 34,
+                  height: 34,
+                  borderRadius: 10,
+                  border: "1px solid rgba(0,0,0,0.12)",
+                  background: "rgba(255,255,255,0.88)",
+                  color: "#111",
+                  fontWeight: 900,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+                aria-label="Fullscreen notes"
+                title="Fullscreen"
+              >
+                ⤢
+              </button>
+            </div>
 
             <div style={{ display: "flex", gap: 8 }}>
               {["idea", "active", "done"].map((s) => (
@@ -1778,53 +1252,50 @@ overflow: "visible",
             </div>
 
             {/* Images */}
-<div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 6 }}>
-  <div style={{ fontWeight: 800 }}>Images</div>
-  <button
-    onClick={() => fileInputRef.current?.click()}
-    style={{
-      padding: "8px 10px",
-      borderRadius: 10,
-      border: "1px solid rgba(255,255,255,0.12)",
-      background: "#151517",
-      color: "#FFFFFF",
-      fontWeight: 800,
-    }}
-  >
-    + Add image
-  </button>
-</div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 6 }}>
+              <div style={{ fontWeight: 900 }}>Images</div>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                style={{
+                  padding: "8px 10px",
+                  borderRadius: 10,
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  background: "#151517",
+                  color: "#FFFFFF",
+                  fontWeight: 800,
+                }}
+              >
+                + Add image
+              </button>
+            </div>
 
-{/* Scroll area for many images */}
-<div
-  style={{
-    maxHeight: 260,
-    overflowY: "auto",
-    WebkitOverflowScrolling: "touch",
-    paddingRight: 4,
-    marginTop: 8,
-  }}
->
-  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
-    {(Array.isArray(selectedNode.data?.imageIds) ? selectedNode.data.imageIds : []).map((imgId) => (
-      <NodeImageThumb
-        key={imgId}
-        imageId={imgId}
-        getUrl={getImageObjectUrl}
-        onOpen={(url) => openPreview(url)}
+            <div
+              style={{
+                maxHeight: 260,
+                overflowY: "auto",
+                WebkitOverflowScrolling: "touch",
+                paddingRight: 4,
+                marginTop: 8,
+              }}
+            >
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+                {(Array.isArray(selectedNode.data?.imageIds) ? selectedNode.data.imageIds : []).map((imgId) => (
+                  <NodeImageThumb
+                    key={imgId}
+                    imageId={imgId}
+                    getUrl={getImageObjectUrl}
+                    onOpen={(url) => openPreview(url)}
+                    onDelete={() => deleteImageFromSelectedNode(imgId)}
+                  />
+                ))}
+              </div>
 
-        onDelete={() => deleteImageFromSelectedNode(imgId)}
-      />
-    ))}
-  </div>
-
-  {(Array.isArray(selectedNode.data?.imageIds) ? selectedNode.data.imageIds.length : 0) === 0 && (
-    <div style={{ opacity: 0.65, fontSize: 12, marginTop: 8 }}>
-      No images yet. Add one from your gallery.
-    </div>
-  )}
-</div>
-
+              {(Array.isArray(selectedNode.data?.imageIds) ? selectedNode.data.imageIds.length : 0) === 0 && (
+                <div style={{ opacity: 0.65, fontSize: 12, marginTop: 8 }}>
+                  No images yet. Add one from your gallery.
+                </div>
+              )}
+            </div>
 
             <button
               onClick={deleteSelectedNode}
@@ -1834,26 +1305,33 @@ overflow: "visible",
                 border: "1px solid rgba(255,255,255,0.12)",
                 background: "#151517",
                 color: "#FFFFFF",
+                fontWeight: 800,
               }}
             >
-
-              {isDetailsCollapsed && (
-  <div style={{ opacity: 0.75, fontSize: 12, paddingTop: 18 }}>
-    Node details скрыты — нажми ▴ чтобы открыть
-  </div>
-)}
-
               Delete node
             </button>
+
+            {selectedEdgeId && linkMode ? (
+              <button
+                onClick={deleteSelectedEdge}
+                style={{
+                  padding: "10px 8px",
+                  borderRadius: 10,
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  background: "rgba(255,255,255,0.06)",
+                  color: "#FFFFFF",
+                  fontWeight: 800,
+                }}
+              >
+                Delete selected link
+              </button>
+            ) : null}
           </div>
         )}
       </div>
     </div>
   );
 }
-
-
-
 
 export default function AppWithBoundary() {
   return (
