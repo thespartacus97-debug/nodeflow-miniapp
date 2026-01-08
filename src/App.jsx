@@ -959,20 +959,23 @@ function App() {
     scheduleSave();
   }
 
-  function updateSelectedNodeNotes(nextNotes) {
-    if (!selectedNodeId) return;
-    pushHistory(nodes, edges);
+  function updateSelectedNodeNotes(nextNotes, { commit = false } = {}) {
+  if (!selectedNodeId) return;
 
-    setNodes((prev) =>
-      prev.map((n) =>
-        n.id !== selectedNodeId
-          ? n
-          : { ...n, data: { ...n.data, notes: String(nextNotes ?? "") } }
-      )
-    );
+  // Историю пишем только "commit" (например, когда ушли из поля)
+  if (commit) pushHistory(nodes, edges);
 
-    scheduleSave();
-  }
+  setNodes((prev) =>
+    prev.map((n) =>
+      n.id !== selectedNodeId
+        ? n
+        : { ...n, data: { ...n.data, notes: String(nextNotes ?? "") } }
+    )
+  );
+
+  scheduleSave();
+}
+
 
   async function addImagesToSelectedNode(files) {
     if (!selectedNodeId) return;
@@ -1447,6 +1450,9 @@ function App() {
     background: "#111111",
     color: "#FFFFFF",
     maxHeight: isDetailsCollapsed ? 56 : "46dvh",
+    paddingTop: 22,
+overflow: "visible",
+
     overflowY: isDetailsCollapsed ? "hidden" : "auto",
     WebkitOverflowScrolling: "touch",
     transition: "max-height 180ms ease",
@@ -1454,33 +1460,34 @@ function App() {
   }}
 >
 
-{/* === NF-DETAILS-TOGGLE-START === */}
-<button
-  onClick={() => setIsDetailsCollapsed((v) => !v)}
-  style={{
-    position: "absolute",
-    top: -14,
-    left: "50%",
-    transform: "translateX(-50%)",
-    height: 28,
-    width: 56,
-    borderRadius: 12,
-    border: "1px solid rgba(255,255,255,0.14)",
-    background: "rgba(21,21,23,0.92)",
-    color: "rgba(255,255,255,0.85)",
-    fontWeight: 900,
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 30,
-  }}
-  aria-label={isDetailsCollapsed ? "Expand panel" : "Collapse panel"}
-  title={isDetailsCollapsed ? "Expand" : "Collapse"}
->
-  {isDetailsCollapsed ? "▴" : "▾"}
-</button>
-{/* === NF-DETAILS-TOGGLE-END === */}
+{selectedNode && (
+  <button
+    onClick={() => setIsDetailsCollapsed((v) => !v)}
+    style={{
+      position: "absolute",
+      top: -14,
+      left: "50%",
+      transform: "translateX(-50%)",
+      height: 28,
+      width: 56,
+      borderRadius: 12,
+      border: "1px solid rgba(255,255,255,0.14)",
+      background: "rgba(21,21,23,0.92)",
+      color: "rgba(255,255,255,0.85)",
+      fontWeight: 900,
+      cursor: "pointer",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      zIndex: 30,
+    }}
+    aria-label={isDetailsCollapsed ? "Expand panel" : "Collapse panel"}
+    title={isDetailsCollapsed ? "Expand" : "Collapse"}
+  >
+    {isDetailsCollapsed ? "▴" : "▾"}
+  </button>
+)}
+
 
 
 
@@ -1530,7 +1537,9 @@ function App() {
             {/* Notes */}
             <textarea
               value={selectedNode.data?.notes || ""}
-              onChange={(e) => updateSelectedNodeNotes(e.target.value)}
+              onChange={(e) => updateSelectedNodeNotes(e.target.value, { commit: false })}
+onBlur={(e) => updateSelectedNodeNotes(e.target.value, { commit: true })}
+
               placeholder="Notes (internal text, not shown on the node)"
               rows={5}
               style={{
