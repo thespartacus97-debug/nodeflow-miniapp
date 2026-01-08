@@ -706,6 +706,7 @@ function App() {
   const [linkMode, setLinkMode] = useState(false);
   const [showMiniMap, setShowMiniMap] = useState(true);
   const [showControls, setShowControls] = useState(true);
+  const [isDetailsCollapsed, setIsDetailsCollapsed] = useState(false);
 
   const rfRef = useRef(null);
   const didFitRef = useRef(false);
@@ -763,6 +764,8 @@ function App() {
     setIsDirty(false);
     setIsSaving(false);
     setPreviewUrl(null);
+    setIsDetailsCollapsed(false);
+
   }, [gKey, clearSaveTimer]);
 
   // load graph
@@ -1409,20 +1412,51 @@ function App() {
       </div>
 
       {/* Bottom sheet */}
-      <div
+<div
   style={{
     padding: 12,
     borderTop: `1px solid ${theme.border}`,
     fontFamily: "Arial, sans-serif",
     background: "#111111",
     color: "#FFFFFF",
-    maxHeight: "46dvh",
-    overflowY: "auto",
+    maxHeight: isDetailsCollapsed ? 56 : "46dvh",
+    overflowY: isDetailsCollapsed ? "hidden" : "auto",
     WebkitOverflowScrolling: "touch",
+    transition: "max-height 180ms ease",
+    position: "relative",
   }}
 >
 
-        {!selectedNode ? (
+{/* === NF-DETAILS-TOGGLE-START === */}
+<button
+  onClick={() => setIsDetailsCollapsed((v) => !v)}
+  style={{
+    position: "absolute",
+    top: 8,
+    right: 8,
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    border: "1px solid rgba(255,255,255,0.12)",
+    background: "rgba(21,21,23,0.9)",
+    color: "rgba(255,255,255,0.85)",
+    fontWeight: 900,
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 20,
+  }}
+  aria-label={isDetailsCollapsed ? "Expand panel" : "Collapse panel"}
+  title={isDetailsCollapsed ? "Expand" : "Collapse"}
+>
+  {isDetailsCollapsed ? "▴" : "▾"}
+</button>
+{/* === NF-DETAILS-TOGGLE-END === */}
+
+
+        {isDetailsCollapsed ? null : !selectedNode ? (
+
           selectedEdgeId && linkMode ? (
             <div style={{ display: "grid", gap: 10 }}>
               <div style={{ opacity: 0.65 }}>Link selected.</div>
@@ -1560,6 +1594,13 @@ function App() {
                 color: "#FFFFFF",
               }}
             >
+
+              {isDetailsCollapsed && (
+  <div style={{ opacity: 0.75, fontSize: 12, paddingTop: 18 }}>
+    Node details скрыты — нажми ▴ чтобы открыть
+  </div>
+)}
+
               Delete node
             </button>
           </div>
@@ -1568,6 +1609,9 @@ function App() {
     </div>
   );
 }
+
+
+
 
 export default function AppWithBoundary() {
   return (
