@@ -671,10 +671,11 @@ function App() {
 
   /* Сам прямоугольник viewport (он и заливал тебе всё) */
   .react-flow__minimap-viewport {
-    fill: rgba(0, 194, 255, 0.08) !important;
-    stroke: rgba(0, 194, 255, 0.85) !important;
-    stroke-width: 2px !important;
-  }
+  fill: transparent !important;
+  stroke: rgba(111, 66, 255, 0.85) !important;
+  stroke-width: 2px !important;
+}
+
 
   /* Чтобы ноды в миникарте всегда были видны */
   .react-flow__minimap-node {
@@ -809,23 +810,24 @@ function App() {
     >
       {showMiniMap && (
         <MiniMap
-          style={{ width: "100%", height: "100%" }}
-          zoomable={false}
-          pannable={false}
-          maskColor="rgba(15,15,16,0.55)"
-          nodeBorderRadius={6}
-          nodeColor={(n) => {
-            if (n.selected) return "#6F42FF";
-            const st = n?.data?.status;
-            if (st === "active") return "#00C2FF";
-            if (st === "done") return "rgba(183,183,183,0.55)";
-            return "rgba(183,183,183,0.85)";
-          }}
-          nodeStrokeColor={(n) =>
-            n.selected ? "#6F42FF" : "rgba(255,255,255,0.10)"
-          }
-          nodeStrokeWidth={2}
-        />
+  style={{ width: "100%", height: "100%" }}
+  zoomable={false}
+  pannable={false}
+  maskColor="rgba(15,15,16,0.55)"
+  nodeBorderRadius={6}
+  nodeColor={(n) => {
+    if (n.selected) return "#6F42FF";
+    const st = n?.data?.status;
+    if (st === "active") return "#00C2FF";
+    if (st === "done") return "rgba(183,183,183,0.55)";
+    return "rgba(183,183,183,0.85)";
+  }}
+  nodeStrokeColor={(n) =>
+    n.selected ? "#6F42FF" : "rgba(255,255,255,0.10)"
+  }
+  nodeStrokeWidth={2}
+/>
+
       )}
     </div>
   </div>
