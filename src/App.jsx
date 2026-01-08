@@ -1,9 +1,7 @@
 // TEST-MARK-XYZ
 
-import { useEffect, useMemo, useState, useCallback, useRef } from "react";
-
+import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import ReactFlow, {
-  
   Background,
   Controls,
   MiniMap,
@@ -17,8 +15,6 @@ import ReactFlow, {
   BaseEdge,
   getBezierPath,
 } from "reactflow";
-
-
 import "reactflow/dist/style.css";
 
 // ---------- Telegram ----------
@@ -73,7 +69,6 @@ function NodeflowEdge(props) {
 
   return (
     <>
-      {/* Wide invisible tap zone */}
       <path
         d={path}
         fill="none"
@@ -141,7 +136,7 @@ function NodeCard({ data, selected, linkMode }) {
         position: "relative",
       }}
     >
-      {/* Receiver across full node (for easy magnet), but non-blocking in Link OFF */}
+      {/* full receiver, but non-blocking in Link OFF */}
       <Handle
         type="target"
         position={Position.Left}
@@ -188,9 +183,7 @@ function NodeCard({ data, selected, linkMode }) {
         <div style={dotStyle} />
       </Handle>
 
-      <div style={{ fontWeight: 800, color: titleColor, fontSize: 14 }}>
-        {title}
-      </div>
+      <div style={{ fontWeight: 800, color: titleColor, fontSize: 14 }}>{title}</div>
 
       <div style={{ marginTop: 8, display: "flex", gap: 8, alignItems: "center" }}>
         <div
@@ -208,9 +201,7 @@ function NodeCard({ data, selected, linkMode }) {
         </div>
 
         {selected && (
-          <div style={{ color: "#6F42FF", fontSize: 12, fontWeight: 800 }}>
-            selected
-          </div>
+          <div style={{ color: "#6F42FF", fontSize: 12, fontWeight: 800 }}>selected</div>
         )}
       </div>
     </div>
@@ -223,34 +214,18 @@ class ErrorBoundary extends React.Component {
     super(props);
     this.state = { hasError: false, message: "" };
   }
-
   static getDerivedStateFromError(error) {
     return { hasError: true, message: String(error?.message || error) };
   }
-
   componentDidCatch(error) {
     console.log("Nodeflow crash:", error);
   }
-
   render() {
     if (this.state.hasError) {
       return (
-        <div
-          style={{
-            padding: 16,
-            fontFamily: "Arial",
-            background: "#0F0F10",
-            color: "#fff",
-            minHeight: "100dvh",
-          }}
-        >
+        <div style={{ padding: 16, fontFamily: "Arial", background: "#0F0F10", color: "#fff", minHeight: "100dvh" }}>
           <h2 style={{ marginTop: 0 }}>Nodeflow crashed</h2>
-          <div style={{ opacity: 0.8, whiteSpace: "pre-wrap" }}>
-            {this.state.message}
-          </div>
-          <div style={{ marginTop: 12, opacity: 0.7 }}>
-            Tip: send me this error text — I’ll fix it fast.
-          </div>
+          <div style={{ opacity: 0.8, whiteSpace: "pre-wrap" }}>{this.state.message}</div>
         </div>
       );
     }
@@ -276,7 +251,6 @@ function App() {
   const [projects, setProjects] = useState([]);
   const [newProjectTitle, setNewProjectTitle] = useState("");
   const [currentProject, setCurrentProject] = useState(null);
-const rfRef = useRef(null);
 
   const pKey = useMemo(() => projectsStorageKey(userId), [userId]);
 
@@ -299,12 +273,7 @@ const rfRef = useRef(null);
     const name = newProjectTitle.trim();
     if (!name) return;
 
-    const p = {
-      id: crypto.randomUUID(),
-      title: name,
-      createdAt: Date.now(),
-    };
-
+    const p = { id: crypto.randomUUID(), title: name, createdAt: Date.now() };
     setProjects((prev) => [p, ...prev]);
     setNewProjectTitle("");
   }
@@ -332,6 +301,9 @@ const rfRef = useRef(null);
   const [showMiniMap, setShowMiniMap] = useState(true);
   const [showControls, setShowControls] = useState(true);
 
+  const rfRef = useRef(null);
+  const didFitRef = useRef(false);
+
   const nodeTypes = useMemo(
     () => ({
       card: (props) => <NodeCard {...props} linkMode={linkMode} />,
@@ -339,6 +311,11 @@ const rfRef = useRef(null);
     [linkMode]
   );
   const edgeTypes = useMemo(() => ({ nf: NodeflowEdge }), []);
+
+  // reset "fit done" when switching projects
+  useEffect(() => {
+    didFitRef.current = false;
+  }, [gKey]);
 
   // load graph
   useEffect(() => {
@@ -357,17 +334,10 @@ const rfRef = useRef(null);
       const safeNodes = (Array.isArray(data.nodes) ? data.nodes : []).map((n) => {
         const x = Number(n?.position?.x);
         const y = Number(n?.position?.y);
-
         return {
           ...n,
-          position: {
-            x: Number.isFinite(x) ? x : 40,
-            y: Number.isFinite(y) ? y : 40,
-          },
-          data: {
-            title: n?.data?.title || "New step",
-            status: n?.data?.status || "idea",
-          },
+          position: { x: Number.isFinite(x) ? x : 40, y: Number.isFinite(y) ? y : 40 },
+          data: { title: n?.data?.title || "New step", status: n?.data?.status || "idea" },
           type: n?.type || "card",
         };
       });
@@ -378,11 +348,6 @@ const rfRef = useRef(null);
 
       setNodes(safeNodes);
       setEdges(safeEdges);
-      requestAnimationFrame(() => {
-  rfRef.current?.fitView({ padding: 0.2, duration: 0 });
-});
-
-
     } catch {
       setNodes([]);
       setEdges([]);
@@ -391,6 +356,19 @@ const rfRef = useRef(null);
     setSelectedNodeId(null);
     setSelectedEdgeId(null);
   }, [gKey]);
+
+  // IMPORTANT: do fitView only when we have BOTH instance and nodes
+  useEffect(() => {
+    if (!gKey) return;
+    if (didFitRef.current) return;
+    if (!rfRef.current) return;
+
+    // even empty graph should have stable viewport
+    requestAnimationFrame(() => {
+      rfRef.current?.fitView({ padding: 0.25, duration: 0 });
+      didFitRef.current = true;
+    });
+  }, [gKey, nodes.length]);
 
   // save graph
   useEffect(() => {
@@ -404,7 +382,6 @@ const rfRef = useRef(null);
     (changes) => setNodes((nds) => applyNodeChanges(changes, nds)),
     []
   );
-
   const onEdgesChange = useCallback(
     (changes) => setEdges((eds) => applyEdgeChanges(changes, eds)),
     []
@@ -423,13 +400,7 @@ const rfRef = useRef(null);
 
       setEdges((eds) =>
         addEdge(
-          {
-            ...connection,
-            id: crypto.randomUUID(),
-            type: "nf",
-            sourceHandle,
-            targetHandle,
-          },
+          { ...connection, id: crypto.randomUUID(), type: "nf", sourceHandle, targetHandle },
           eds
         )
       );
@@ -447,6 +418,9 @@ const rfRef = useRef(null);
     };
     setNodes((prev) => [newNode, ...prev]);
     setSelectedNodeId(id);
+
+    // keep minimap sane after adding
+    didFitRef.current = false;
   }
 
   const selectedNode = useMemo(
@@ -457,21 +431,17 @@ const rfRef = useRef(null);
   function updateSelectedNode(patch) {
     if (!selectedNodeId) return;
     setNodes((prev) =>
-      prev.map((n) =>
-        n.id !== selectedNodeId
-          ? n
-          : { ...n, data: { ...n.data, ...patch } }
-      )
+      prev.map((n) => (n.id !== selectedNodeId ? n : { ...n, data: { ...n.data, ...patch } }))
     );
+    didFitRef.current = false;
   }
 
   function deleteSelectedNode() {
     if (!selectedNodeId) return;
     setNodes((prev) => prev.filter((n) => n.id !== selectedNodeId));
-    setEdges((prev) =>
-      prev.filter((e) => e.source !== selectedNodeId && e.target !== selectedNodeId)
-    );
+    setEdges((prev) => prev.filter((e) => e.source !== selectedNodeId && e.target !== selectedNodeId));
     setSelectedNodeId(null);
+    didFitRef.current = false;
   }
 
   function deleteSelectedEdge() {
@@ -483,15 +453,7 @@ const rfRef = useRef(null);
   // ---------- UI: Projects ----------
   if (!currentProject) {
     return (
-      <div
-        style={{
-          padding: 16,
-          fontFamily: "Arial, sans-serif",
-          background: "#0F0F10",
-          minHeight: "100dvh",
-          color: "#FFFFFF",
-        }}
-      >
+      <div style={{ padding: 16, fontFamily: "Arial, sans-serif", background: "#0F0F10", minHeight: "100dvh", color: "#FFFFFF" }}>
         <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
           <h1 style={{ margin: 0 }}>Nodeflow</h1>
           <span style={{ opacity: 0.6, fontSize: 12 }}>
@@ -612,9 +574,7 @@ const rfRef = useRef(null);
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <div style={{ fontWeight: 800 }}>{currentProject.title}</div>
             {linkMode && (
-              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.65)" }}>
-                Link mode ON
-              </div>
+              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.65)" }}>Link mode ON</div>
             )}
           </div>
         </div>
@@ -653,45 +613,15 @@ const rfRef = useRef(null);
       </div>
 
       {/* Canvas */}
-      <div
-        style={{
-          flex: 1,
-          background: "#0F0F10",
-          touchAction: "none",
-          position: "relative",
-        }}
-      >
+      <div style={{ flex: 1, background: "#0F0F10", touchAction: "none", position: "relative" }}>
+        {/* minimap viewport: stroke only */}
         <style>{`
-  /* --- MiniMap визуал и фикс "заливки" --- */
-  .react-flow__minimap {
-    background: rgba(23,23,23,0.92) !important;
-    border-radius: 14px;
-    overflow: hidden;
-  }
-
-  .react-flow__minimap svg {
-    display: block;
-  }
-
-  /* Маска вокруг viewport */
-  .react-flow__minimap-mask {
-    fill: rgba(15,15,16,0.55) !important;
-  }
-
-  /* Сам прямоугольник viewport (он и заливал тебе всё) */
-  .react-flow__minimap-viewport {
-  fill: transparent !important;
-  stroke: rgba(111, 66, 255, 0.85) !important;
-  stroke-width: 2px !important;
-}
-
-
-  /* Чтобы ноды в миникарте всегда были видны */
-  .react-flow__minimap-node {
-    fill-opacity: 1 !important;
-    stroke-opacity: 1 !important;
-  }
-`}</style>
+          .react-flow__minimap-viewport {
+            fill: transparent !important;
+            stroke: rgba(111, 66, 255, 0.85) !important;
+            stroke-width: 2px !important;
+          }
+        `}</style>
 
         <ReactFlow
           nodes={nodes}
@@ -703,9 +633,10 @@ const rfRef = useRef(null);
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onInit={(instance) => {
-  rfRef.current = instance;
-}}
-
+            rfRef.current = instance;
+            // ensure minimap/viewport is correct right after init
+            didFitRef.current = false;
+          }}
           onConnect={onConnect}
           onNodeClick={(_, node) => {
             setSelectedNodeId(node.id);
@@ -716,7 +647,6 @@ const rfRef = useRef(null);
             setSelectedEdgeId(edge.id);
             setSelectedNodeId(null);
           }}
-      
           minZoom={0.15}
           maxZoom={2}
           zoomOnPinch={true}
@@ -737,15 +667,7 @@ const rfRef = useRef(null);
           <Background />
 
           {/* Controls + Handle */}
-          <div
-            style={{
-              position: "absolute",
-              left: 12,
-              bottom: 12,
-              zIndex: 10,
-              pointerEvents: "auto",
-            }}
-          >
+          <div style={{ position: "absolute", left: 12, bottom: 12, zIndex: 10, pointerEvents: "auto" }}>
             <button
               onClick={() => setShowControls((v) => !v)}
               style={{
@@ -770,100 +692,80 @@ const rfRef = useRef(null);
             </button>
 
             {showControls && (
-              <div
-                style={{
-                  marginLeft: 22,
-                  borderRadius: 14,
-                  overflow: "hidden",
-                  border: "none",
-                  background: "transparent",
-                }}
-              >
+              <div style={{ marginLeft: 22, borderRadius: 14, overflow: "hidden", border: "none", background: "transparent" }}>
                 <Controls />
               </div>
             )}
           </div>
 
+          {/* MiniMap (single, correct layer) */}
           <Panel position="bottom-right">
-  <div style={{ position: "relative", pointerEvents: "auto" }}>
-    {/* кнопка */}
-    <button
-      onClick={() => setShowMiniMap((v) => !v)}
-      style={{
-        position: "absolute",
-        right: 8,
-        top: 8,
-        width: 28,
-        height: 28,
-        borderRadius: 10,
-        border: "1px solid rgba(183,183,183,0.18)",
-        background: "rgba(23,23,23,0.92)",
-        color: "#FFFFFF",
-        fontWeight: 900,
-        lineHeight: "26px",
-        zIndex: 2,
-      }}
-      aria-label="Toggle minimap"
-    >
-      {showMiniMap ? "—" : "▢"}
-    </button>
+            <div style={{ position: "relative", pointerEvents: "auto" }}>
+              <button
+                onClick={() => setShowMiniMap((v) => !v)}
+                style={{
+                  position: "absolute",
+                  right: 8,
+                  top: 8,
+                  width: 28,
+                  height: 28,
+                  borderRadius: 10,
+                  border: "1px solid rgba(183,183,183,0.18)",
+                  background: "rgba(23,23,23,0.92)",
+                  color: "#FFFFFF",
+                  fontWeight: 900,
+                  lineHeight: "26px",
+                  zIndex: 2,
+                }}
+                aria-label="Toggle minimap"
+              >
+                {showMiniMap ? "—" : "▢"}
+              </button>
 
-    {/* контейнер миникарты */}
-    <div
-      style={{
-        width: showMiniMap ? 160 : 54,
-        height: showMiniMap ? 120 : 44,
-        borderRadius: 14,
-        overflow: "hidden",
-        border: "1px solid rgba(183,183,183,0.18)",
-        background: "rgba(23,23,23,0.92)",
-        boxShadow: "0 10px 30px rgba(0,0,0,0.35)",
-        transition: "width 120ms ease, height 120ms ease",
-      }}
-    >
-      {showMiniMap && (
-        <MiniMap
-  style={{ width: "100%", height: "100%" }}
-  zoomable={false}
-  pannable={false}
-  maskColor="rgba(15,15,16,0.55)"
-  nodeBorderRadius={6}
-  nodeColor={(n) => {
-    if (n.selected) return "#6F42FF";
-    const st = n?.data?.status;
-    if (st === "active") return "#00C2FF";
-    if (st === "done") return "rgba(183,183,183,0.55)";
-    return "rgba(183,183,183,0.85)";
-  }}
-  nodeStrokeColor={(n) =>
-    n.selected ? "#6F42FF" : "rgba(255,255,255,0.10)"
-  }
-  nodeStrokeWidth={2}
-/>
-
-      )}
-    </div>
-  </div>
-</Panel>
-
+              <div
+                style={{
+                  width: showMiniMap ? 160 : 54,
+                  height: showMiniMap ? 120 : 44,
+                  borderRadius: 14,
+                  overflow: "hidden",
+                  border: "1px solid rgba(183,183,183,0.18)",
+                  background: "rgba(23,23,23,0.92)",
+                  boxShadow: "0 10px 30px rgba(0,0,0,0.35)",
+                  transition: "width 120ms ease, height 120ms ease",
+                }}
+              >
+                {showMiniMap && (
+                  <MiniMap
+                    style={{ width: "100%", height: "100%" }}
+                    zoomable={false}
+                    pannable={false}
+                    maskColor="rgba(15,15,16,0.55)"
+                    nodeBorderRadius={6}
+                    nodeColor={(n) => {
+                      if (n.selected) return "#6F42FF";
+                      const st = n?.data?.status;
+                      if (st === "active") return "#00C2FF";
+                      if (st === "done") return "rgba(183,183,183,0.55)";
+                      return "rgba(183,183,183,0.85)";
+                    }}
+                    nodeStrokeColor={(n) =>
+                      n.selected ? "#6F42FF" : "rgba(255,255,255,0.10)"
+                    }
+                    nodeStrokeWidth={2}
+                  />
+                )}
+              </div>
+            </div>
+          </Panel>
         </ReactFlow>
       </div>
 
       {/* Bottom sheet */}
-      <div
-        style={{
-          padding: 12,
-          borderTop: `1px solid ${theme.border}`,
-          fontFamily: "Arial, sans-serif",
-          background: "#111111",
-          color: "#FFFFFF",
-        }}
-      >
+      <div style={{ padding: 12, borderTop: `1px solid ${theme.border}`, fontFamily: "Arial, sans-serif", background: "#111111", color: "#FFFFFF" }}>
         {!selectedNode ? (
           selectedEdgeId && linkMode ? (
             <div style={{ display: "grid", gap: 10 }}>
               <div style={{ opacity: 0.65 }}>Link selected.</div>
-
               <button
                 onClick={deleteSelectedEdge}
                 style={{
@@ -877,7 +779,6 @@ const rfRef = useRef(null);
               >
                 Delete link
               </button>
-
               <div style={{ opacity: 0.6, fontSize: 12 }}>
                 Tip: tap another link to switch, or turn off Link mode.
               </div>
