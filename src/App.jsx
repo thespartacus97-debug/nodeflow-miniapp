@@ -293,14 +293,87 @@ function App() {
   const [nodes, setNodes] = useState([]);
   const [edges, setEdges] = useState([]);
 
-  // === NF-UNDOREDO-ENGINE-START ===
+  // ===== Saved/Unsaved + Debounced autosave =====
+  const [isDirty, setIsDirty] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const saveTimerRef = useRef(null);
+
+  // держим "последние" nodes/edges, чтобы сохранять из таймера без проблем с замыканиями
+  const nodesRef = useRef(nodes);
+  const edgesRef = useRef(edges);
+
+  useEffect(() => {
+    nodesRef.current = nodes;
+  }, [nodes]);
+
+  useEffect(() => {
+    edgesRef.current = edges;
+  }, [edges]);
+
+  const clearSaveTimer = useCallback(() => {
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
+  }, []);
+
+  const saveNow = useCallback(() => {
+    if (!gKey) return;
+    clearSaveTimer();
+
+    setIsSaving(true);
+    try {
+      localStorage.setItem(gKey, JSON.stringify({ nodes: nodesRef.current, edges: edgesRef.current }));
+      setIsDirty(false);
+    } catch {
+      // если не сохранилось — оставляем dirty
+      setIsDirty(true);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [gKey, clearSaveTimer]);
+
+  const scheduleSave = useCallback(() => {
+    if (!gKey) return;
+
+    setIsDirty(true);
+    setIsSaving(true);
+
+    clearSaveTimer();
+    saveTimerRef.current = setTimeout(() => {
+      try {
+        localStorage.setItem(gKey, JSON.stringify({ nodes: nodesRef.current, edges: edgesRef.current }));
+        setIsDirty(false);
+      } catch {
+        setIsDirty(true);
+      } finally {
+        setIsSaving(false);
+        saveTimerRef.current = null;
+      }
+    }, 700);
+  }, [gKey, clearSaveTimer]);
+
+  // flush при смене проекта / размонтировании
+  useEffect(() => {
+    return () => {
+      // если уходили, и было несохранённое — пробуем сохранить сразу
+      if (gKey && (isDirty || isSaving)) {
+        try {
+          localStorage.setItem(gKey, JSON.stringify({ nodes: nodesRef.current, edges: edgesRef.current }));
+        } catch {}
+      }
+      clearSaveTimer();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gKey]); // намеренно только gKey
+
+  // === Undo/Redo engine ===
   const historyRef = useRef({
     past: [],
     future: [],
     lastSig: "",
   });
 
-  // чтобы UI знал, что история изменилась (ref сам по себе UI не обновляет)
   const [historyTick, setHistoryTick] = useState(0);
 
   const MAX_HISTORY = 60;
@@ -348,7 +421,10 @@ function App() {
     setEdges(prev.edges);
     h.lastSig = makeSig(prev.nodes, prev.edges);
     setHistoryTick((t) => t + 1);
-  }, [nodes, edges]);
+
+    // изменение — значит нужно сохранить (debounced)
+    scheduleSave();
+  }, [nodes, edges, scheduleSave]);
 
   const redo = useCallback(() => {
     const h = historyRef.current;
@@ -365,11 +441,12 @@ function App() {
     setEdges(next.edges);
     h.lastSig = makeSig(next.nodes, next.edges);
     setHistoryTick((t) => t + 1);
-  }, [nodes, edges]);
+
+    scheduleSave();
+  }, [nodes, edges, scheduleSave]);
 
   const canUndo = useMemo(() => historyRef.current.past.length > 0, [historyTick]);
   const canRedo = useMemo(() => historyRef.current.future.length > 0, [historyTick]);
-  // === NF-UNDOREDO-ENGINE-END ===
 
   const [selectedNodeId, setSelectedNodeId] = useState(null);
   const [selectedEdgeId, setSelectedEdgeId] = useState(null);
@@ -390,14 +467,17 @@ function App() {
 
   const edgeTypes = useMemo(() => ({ nf: NodeflowEdge }), []);
 
-  // reset "fit done" when switching projects
+  // reset "fit done" + reset history + reset save states on project switch
   useEffect(() => {
     didFitRef.current = false;
 
-    // сбрасываем историю при смене проекта (иначе undo/redo будет путаться между проектами)
     historyRef.current = { past: [], future: [], lastSig: "" };
     setHistoryTick((t) => t + 1);
-  }, [gKey]);
+
+    clearSaveTimer();
+    setIsDirty(false);
+    setIsSaving(false);
+  }, [gKey, clearSaveTimer]);
 
   // load graph
   useEffect(() => {
@@ -408,6 +488,8 @@ function App() {
       if (!raw) {
         setNodes([]);
         setEdges([]);
+        setIsDirty(false);
+        setIsSaving(false);
         return;
       }
 
@@ -430,16 +512,20 @@ function App() {
 
       setNodes(safeNodes);
       setEdges(safeEdges);
+      setIsDirty(false);
+      setIsSaving(false);
     } catch {
       setNodes([]);
       setEdges([]);
+      setIsDirty(false);
+      setIsSaving(false);
     }
 
     setSelectedNodeId(null);
     setSelectedEdgeId(null);
   }, [gKey]);
 
-  // IMPORTANT: do fitView only when we have BOTH instance and nodes
+  // do fitView only when we have BOTH instance and nodes
   useEffect(() => {
     if (!gKey) return;
     if (didFitRef.current) return;
@@ -451,16 +537,7 @@ function App() {
     });
   }, [gKey, nodes.length]);
 
-  // save graph
-  useEffect(() => {
-    if (!gKey) return;
-    try {
-      localStorage.setItem(gKey, JSON.stringify({ nodes, edges }));
-    } catch {}
-  }, [gKey, nodes, edges]);
-
-  // === NF-HOTKEYS-START ===
-  // (ВАЖНО: стоит ПОСЛЕ объявления undo/redo)
+  // === Hotkeys (после undo/redo) ===
   useEffect(() => {
     const handler = (e) => {
       const isMac = /Mac|iPhone|iPad/.test(navigator.platform);
@@ -483,9 +560,8 @@ function App() {
     window.addEventListener("keydown", handler, { passive: false });
     return () => window.removeEventListener("keydown", handler);
   }, [undo, redo]);
-  // === NF-HOTKEYS-END ===
 
-  // === NF-ONNODESCHANGE-START ===
+  // === ReactFlow handlers (и тут же триггерим autosave) ===
   const onNodesChange = useCallback(
     (changes) => {
       const meaningful = changes.some(
@@ -501,12 +577,12 @@ function App() {
         if (meaningful) pushHistory(next, edges);
         return next;
       });
-    },
-    [pushHistory, edges]
-  );
-  // === NF-ONNODESCHANGE-END ===
 
-  // === NF-ONEDGESCHANGE-START ===
+      if (meaningful) scheduleSave();
+    },
+    [pushHistory, edges, scheduleSave]
+  );
+
   const onEdgesChange = useCallback(
     (changes) => {
       const meaningful = changes.some((c) => c.type === "remove" || c.type === "add");
@@ -516,12 +592,12 @@ function App() {
         if (meaningful) pushHistory(nodes, next);
         return next;
       });
-    },
-    [pushHistory, nodes]
-  );
-  // === NF-ONEDGESCHANGE-END ===
 
-  // === NF-ONCONNECT-START ===
+      if (meaningful) scheduleSave();
+    },
+    [pushHistory, nodes, scheduleSave]
+  );
+
   const onConnect = useCallback(
     (params) => {
       setEdges((eds) => {
@@ -529,13 +605,13 @@ function App() {
         pushHistory(nodes, next);
         return next;
       });
+
+      scheduleSave();
     },
-    [pushHistory, nodes]
+    [pushHistory, nodes, scheduleSave]
   );
-  // === NF-ONCONNECT-END ===
 
   function addNode() {
-    // фикс: добавление ноды — это значимое действие, пишем в историю
     pushHistory(nodes, edges);
 
     const id = crypto.randomUUID();
@@ -549,6 +625,7 @@ function App() {
     setSelectedNodeId(id);
 
     didFitRef.current = false;
+    scheduleSave();
   }
 
   const selectedNode = useMemo(
@@ -559,35 +636,35 @@ function App() {
   function updateSelectedNode(patch) {
     if (!selectedNodeId) return;
 
-    // фикс: изменение data ноды — тоже значимое действие
     pushHistory(nodes, edges);
 
     setNodes((prev) =>
       prev.map((n) => (n.id !== selectedNodeId ? n : { ...n, data: { ...n.data, ...patch } }))
     );
     didFitRef.current = false;
+    scheduleSave();
   }
 
   function deleteSelectedNode() {
     if (!selectedNodeId) return;
 
-    // фикс: удаление — значимое действие
     pushHistory(nodes, edges);
 
     setNodes((prev) => prev.filter((n) => n.id !== selectedNodeId));
     setEdges((prev) => prev.filter((e) => e.source !== selectedNodeId && e.target !== selectedNodeId));
     setSelectedNodeId(null);
     didFitRef.current = false;
+    scheduleSave();
   }
 
   function deleteSelectedEdge() {
     if (!selectedEdgeId) return;
 
-    // фикс: удаление edge — значимое действие
     pushHistory(nodes, edges);
 
     setEdges((prev) => prev.filter((e) => e.id !== selectedEdgeId));
     setSelectedEdgeId(null);
+    scheduleSave();
   }
 
   // ---------- UI: Projects ----------
@@ -681,6 +758,11 @@ function App() {
   }
 
   // ---------- UI: Canvas ----------
+  const saveLabel = isSaving ? "Saving…" : isDirty ? "Unsaved" : "Saved";
+  const saveChipBg = isSaving ? "rgba(111,66,255,0.18)" : isDirty ? "rgba(255,180,0,0.18)" : "rgba(0,255,160,0.14)";
+  const saveChipBorder = isSaving ? "rgba(111,66,255,0.35)" : isDirty ? "rgba(255,180,0,0.35)" : "rgba(0,255,160,0.30)";
+  const saveChipText = isSaving ? "rgba(210,200,255,1)" : isDirty ? "rgba(255,220,150,1)" : "rgba(160,255,220,1)";
+
   return (
     <div style={{ height: "100dvh", display: "flex", flexDirection: "column", position: "relative" }}>
       {/* Top bar */}
@@ -699,7 +781,11 @@ function App() {
       >
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <button
-            onClick={() => setCurrentProject(null)}
+            onClick={() => {
+              // перед выходом — сохраняем сразу, если было несохранённое
+              if (isDirty || isSaving) saveNow();
+              setCurrentProject(null);
+            }}
             style={{
               padding: "8px 10px",
               borderRadius: 10,
@@ -713,6 +799,22 @@ function App() {
 
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <div style={{ fontWeight: 800 }}>{currentProject.title}</div>
+
+            <div
+              style={{
+                fontSize: 12,
+                padding: "4px 8px",
+                borderRadius: 999,
+                border: `1px solid ${saveChipBorder}`,
+                background: saveChipBg,
+                color: saveChipText,
+                fontWeight: 800,
+              }}
+              title="Autosave status"
+            >
+              {saveLabel}
+            </div>
+
             {linkMode && (
               <div style={{ fontSize: 12, color: "rgba(255,255,255,0.65)" }}>Link mode ON</div>
             )}
@@ -763,7 +865,7 @@ function App() {
           }
         `}</style>
 
-        {/* === NF-HISTORY-UI-START === */}
+        {/* Undo/Redo UI */}
         <div
           style={{
             position: "absolute",
@@ -804,7 +906,6 @@ function App() {
             Redo
           </button>
         </div>
-        {/* === NF-HISTORY-UI-END === */}
 
         <ReactFlow
           nodes={nodes}
@@ -848,7 +949,7 @@ function App() {
         >
           <Background />
 
-          {/* Controls + Handle */}
+          {/* Controls */}
           <div style={{ position: "absolute", left: 12, bottom: 12, zIndex: 10, pointerEvents: "auto" }}>
             <button
               onClick={() => setShowControls((v) => !v)}
