@@ -786,19 +786,28 @@ function App() {
             >
               {showMiniMap && (
                 <MiniMap
-                  pannable={true}
-                  zoomable={true}
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    display: "block",
-                    backgroundColor: "rgba(23,23,23,0.92)",
-                  }}
-                  maskColor="rgba(0,0,0,0.15)"
-                  nodeColor={() => "#00C2FF"}
-                  nodeStrokeColor={() => "#6F42FF"}
-                  nodeStrokeWidth={2}
-                />
+  style={{
+    width: "100%",
+    height: "100%",
+    display: "block",
+    background: "rgba(23,23,23,0.92)",
+  }}
+  maskColor="rgba(15,15,16,0.55)"
+  zoomable={false}
+  pannable={false}
+  nodeBorderRadius={6}
+  nodeColor={(n) => {
+    if (n.selected) return "#6F42FF";
+    const st = n?.data?.status;
+    if (st === "active") return "#00C2FF";
+    if (st === "done") return "rgba(183,183,183,0.55)";
+    return "rgba(183,183,183,0.85)";
+  }}
+  nodeStrokeColor={(n) =>
+    n.selected ? "#6F42FF" : "rgba(255,255,255,0.10)"
+  }
+  nodeStrokeWidth={2}
+/>
               )}
             </div>
           </div>
