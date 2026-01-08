@@ -733,7 +733,11 @@ function App() {
   const [linkMode, setLinkMode] = useState(false);
   const [showMiniMap, setShowMiniMap] = useState(true);
   const [showControls, setShowControls] = useState(true);
-  const [isDetailsCollapsed, setIsDetailsCollapsed] = useState(false);
+  const [isNotesFullscreen, setIsNotesFullscreen] = useState(false);
+  const [isPreviewExpanded, setIsPreviewExpanded] = useState(false);
+
+  
+
   
 
   const rfRef = useRef(null);
@@ -741,22 +745,10 @@ function App() {
 
   // === Node details (notes + images) state ===
   const [previewUrl, setPreviewUrl] = useState(null);
-  const [isPreviewExpanded, setIsPreviewExpanded] = useState(false);
+  
 
 
-  const previewImgRef = useRef(null);
 
-const enterFullscreen = (el) => {
-  if (!el) return;
-  const anyEl = el;
-
-  const req =
-    anyEl.requestFullscreen ||
-    anyEl.webkitRequestFullscreen ||
-    anyEl.msRequestFullscreen;
-
-  if (req) req.call(anyEl);
-};
 
   const imageUrlCacheRef = useRef(new Map());
   const fileInputRef = useRef(null);
@@ -793,8 +785,9 @@ const closePreview = useCallback(() => {
   setIsPreviewExpanded(false);
 }, []);
 
+
 const openNotesFullscreen = useCallback(() => {
-  setPreviewUrl(null);              // чтобы фото не мешало
+  setPreviewUrl(null);
   setIsPreviewExpanded(false);
   setIsNotesFullscreen(true);
 }, []);
@@ -802,6 +795,7 @@ const openNotesFullscreen = useCallback(() => {
 const closeNotesFullscreen = useCallback(() => {
   setIsNotesFullscreen(false);
 }, []);
+
 
 
   useEffect(() => {
@@ -1492,6 +1486,8 @@ const closeNotesFullscreen = useCallback(() => {
       gap: 12,
     }}
   >
+
+    
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
       <div style={{ color: "#fff", fontWeight: 900, fontSize: 16 }}>Notes</div>
 
