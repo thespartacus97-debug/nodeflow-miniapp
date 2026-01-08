@@ -870,7 +870,17 @@ function App() {
       </div>
 
       {/* Canvas */}
-      <div style={{ flex: 1, background: "#0F0F10", touchAction: "none", position: "relative" }}>
+      <div
+  style={{
+    flex: 1,
+    background: "#0F0F10",
+    touchAction: "none",
+    position: "relative",
+    paddingBottom: isDetailsCollapsed ? 56 : 360, // место под нижнюю панель
+    boxSizing: "border-box",
+  }}
+>
+
         {/* Hidden input */}
         <input
           ref={fileInputRef}
@@ -1122,23 +1132,24 @@ function App() {
       {/* Bottom sheet */}
       <div
         style={{
-  position: "absolute",
-  top: 8,
-  left: "50%",
-  transform: "translateX(-50%)",
-  height: 28,
-  width: 56,
-  borderRadius: 12,
-  border: "1px solid rgba(255,255,255,0.14)",
-  background: "rgba(21,21,23,0.92)",
-  color: "rgba(255,255,255,0.85)",
-  fontWeight: 900,
-  cursor: "pointer",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  zIndex: 30,
+  padding: 12,
+  borderTop: `1px solid ${theme.border}`,
+  fontFamily: "Arial, sans-serif",
+  background: "#111111",
+  color: "#FFFFFF",
+
+  position: "fixed",
+  left: 0,
+  right: 0,
+  bottom: 0,
+  zIndex: 120,
+
+  maxHeight: isDetailsCollapsed ? 56 : "46dvh",
+  overflowY: isDetailsCollapsed ? "hidden" : "auto",
+  WebkitOverflowScrolling: "touch",
+  transition: "max-height 180ms ease",
 }}
+
 
       >
         {/* toggle button (only when node selected) */}
@@ -1147,7 +1158,7 @@ function App() {
             onClick={() => setIsDetailsCollapsed((v) => !v)}
             style={{
               position: "absolute",
-              top: 8,
+              top: 10,
               left: "50%",
               transform: "translateX(-50%)",
               height: 28,
