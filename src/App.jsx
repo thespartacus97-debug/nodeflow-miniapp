@@ -483,10 +483,11 @@ function App() {
 
   // modal helpers (avoid overlay stacking)
   const openPreview = useCallback((url) => {
-    setIsNotesFullscreen(false);
-    setIsPreviewExpanded(false);
-    setPreviewUrl(url);
-  }, []);
+  setIsNotesFullscreen(false);
+  setIsPreviewExpanded(false);
+  setPreviewUrl(url);
+}, []);
+
   const closePreview = useCallback(() => {
     setPreviewUrl(null);
     setIsPreviewExpanded(false);
@@ -914,9 +915,10 @@ function App() {
               onClick={(ev) => ev.stopPropagation()}
               style={{
                 position: "relative",
-                width: isPreviewExpanded ? "100vw" : "min(92vw, 520px)",
+                width: isPreviewExpanded ? "100vw" : "min(92vw, 420px)",
+
                 height: isPreviewExpanded ? "100dvh" : "auto",
-                maxHeight: isPreviewExpanded ? "100dvh" : "72dvh",
+                maxHeight: isPreviewExpanded ? "100dvh" : "60dvh",
                 borderRadius: isPreviewExpanded ? 0 : 18,
                 overflow: "hidden",
                 border: "1px solid rgba(255,255,255,0.14)",
@@ -1130,24 +1132,26 @@ function App() {
       </div>
 
       {/* Bottom sheet */}
+      {selectedNode ? (
       <div
         style={{
-  padding: 12,
-  borderTop: `1px solid ${theme.border}`,
-  fontFamily: "Arial, sans-serif",
-  background: "#111111",
-  color: "#FFFFFF",
+        padding: 12,
+        borderTop: `1px solid ${theme.border}`,
+       fontFamily: "Arial, sans-serif",
+       background: "#111111",
+       color: "#FFFFFF",
 
-  position: "fixed",
-  left: 0,
-  right: 0,
-  bottom: 0,
-  zIndex: 120,
-
+       position: "fixed",
+       left: 0,
+         right: 0,
+        bottom: 0,
+      zIndex: 120,
+ 
   maxHeight: isDetailsCollapsed ? 56 : "46dvh",
   overflowY: isDetailsCollapsed ? "hidden" : "auto",
   WebkitOverflowScrolling: "touch",
   transition: "max-height 180ms ease",
+  
 }}
 
 
@@ -1347,6 +1351,8 @@ function App() {
           </div>
         )}
       </div>
+      ) : null}
+
     </div>
   );
 }
