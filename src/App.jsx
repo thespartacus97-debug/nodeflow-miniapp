@@ -1409,7 +1409,19 @@ function App() {
       </div>
 
       {/* Bottom sheet */}
-      <div style={{ padding: 12, borderTop: `1px solid ${theme.border}`, fontFamily: "Arial, sans-serif", background: "#111111", color: "#FFFFFF" }}>
+      <div
+  style={{
+    padding: 12,
+    borderTop: `1px solid ${theme.border}`,
+    fontFamily: "Arial, sans-serif",
+    background: "#111111",
+    color: "#FFFFFF",
+    maxHeight: "46dvh",
+    overflowY: "auto",
+    WebkitOverflowScrolling: "touch",
+  }}
+>
+
         {!selectedNode ? (
           selectedEdgeId && linkMode ? (
             <div style={{ display: "grid", gap: 10 }}>
@@ -1491,42 +1503,52 @@ function App() {
             </div>
 
             {/* Images */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 6 }}>
-              <div style={{ fontWeight: 800 }}>Images</div>
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                style={{
-                  padding: "8px 10px",
-                  borderRadius: 10,
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  background: "#151517",
-                  color: "#FFFFFF",
-                  fontWeight: 800,
-                }}
-              >
-                + Add image
-              </button>
-            </div>
+<div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 6 }}>
+  <div style={{ fontWeight: 800 }}>Images</div>
+  <button
+    onClick={() => fileInputRef.current?.click()}
+    style={{
+      padding: "8px 10px",
+      borderRadius: 10,
+      border: "1px solid rgba(255,255,255,0.12)",
+      background: "#151517",
+      color: "#FFFFFF",
+      fontWeight: 800,
+    }}
+  >
+    + Add image
+  </button>
+</div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
-              {(Array.isArray(selectedNode.data?.imageIds) ? selectedNode.data.imageIds : []).map(
-                (imgId) => (
-                  <NodeImageThumb
-                    key={imgId}
-                    imageId={imgId}
-                    getUrl={getImageObjectUrl}
-                    onOpen={(url) => setPreviewUrl(url)}
-                    onDelete={() => deleteImageFromSelectedNode(imgId)}
-                  />
-                )
-              )}
-            </div>
+{/* Scroll area for many images */}
+<div
+  style={{
+    maxHeight: 260,
+    overflowY: "auto",
+    WebkitOverflowScrolling: "touch",
+    paddingRight: 4,
+    marginTop: 8,
+  }}
+>
+  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+    {(Array.isArray(selectedNode.data?.imageIds) ? selectedNode.data.imageIds : []).map((imgId) => (
+      <NodeImageThumb
+        key={imgId}
+        imageId={imgId}
+        getUrl={getImageObjectUrl}
+        onOpen={(url) => setPreviewUrl(url)}
+        onDelete={() => deleteImageFromSelectedNode(imgId)}
+      />
+    ))}
+  </div>
 
-            {(Array.isArray(selectedNode.data?.imageIds) ? selectedNode.data.imageIds.length : 0) === 0 && (
-              <div style={{ opacity: 0.65, fontSize: 12 }}>
-                No images yet. Add one from your gallery.
-              </div>
-            )}
+  {(Array.isArray(selectedNode.data?.imageIds) ? selectedNode.data.imageIds.length : 0) === 0 && (
+    <div style={{ opacity: 0.65, fontSize: 12, marginTop: 8 }}>
+      No images yet. Add one from your gallery.
+    </div>
+  )}
+</div>
+
 
             <button
               onClick={deleteSelectedNode}
