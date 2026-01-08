@@ -4,7 +4,6 @@ import React, { useEffect, useMemo, useState, useCallback, useRef } from "react"
 import ReactFlow, {
   Background,
   Controls,
-  
   addEdge,
   applyEdgeChanges,
   applyNodeChanges,
@@ -262,34 +261,6 @@ function App() {
     }
   }, [pKey]);
 
-// === NF-HOTKEYS-START ===
-useEffect(() => {
-  const handler = (e) => {
-    const isMac = /Mac|iPhone|iPad/.test(navigator.platform);
-    const mod = isMac ? e.metaKey : e.ctrlKey;
-    if (!mod) return;
-
-    const key = e.key.toLowerCase();
-
-    // Undo: Ctrl/Cmd + Z
-    if (key === "z" && !e.shiftKey) {
-      e.preventDefault();
-      undo();
-    }
-
-    // Redo: Ctrl/Cmd + Shift + Z
-    if (key === "z" && e.shiftKey) {
-      e.preventDefault();
-      redo();
-    }
-  };
-
-  window.addEventListener("keydown", handler, { passive: false });
-  return () => window.removeEventListener("keydown", handler);
-}, [undo, redo]);
-// === NF-HOTKEYS-END ===
-
-  
   useEffect(() => {
     try {
       localStorage.setItem(pKey, JSON.stringify(projects));
@@ -321,79 +292,84 @@ useEffect(() => {
 
   const [nodes, setNodes] = useState([]);
   const [edges, setEdges] = useState([]);
+
   // === NF-UNDOREDO-ENGINE-START ===
-const historyRef = useRef({
-  past: [],
-  future: [],
-  lastSig: "",
-});
+  const historyRef = useRef({
+    past: [],
+    future: [],
+    lastSig: "",
+  });
 
-const MAX_HISTORY = 60;
+  // чтобы UI знал, что история изменилась (ref сам по себе UI не обновляет)
+  const [historyTick, setHistoryTick] = useState(0);
 
-const deepCopy = (v) => JSON.parse(JSON.stringify(v));
+  const MAX_HISTORY = 60;
+  const deepCopy = (v) => JSON.parse(JSON.stringify(v));
 
-// Сигнатура, чтобы не пушить одинаковые состояния
-const makeSig = (n, e) => {
-  const nIds = (n || []).map((x) => x.id).join(",");
-  const eIds = (e || []).map((x) => x.id).join(",");
-  return `${(n || []).length}:${(e || []).length}:${nIds}|${eIds}`;
-};
+  const makeSig = (n, e) => {
+    const nIds = (n || []).map((x) => x.id).join(",");
+    const eIds = (e || []).map((x) => x.id).join(",");
+    return `${(n || []).length}:${(e || []).length}:${nIds}|${eIds}`;
+  };
 
-const pushHistory = useCallback(
-  (nextNodes, nextEdges) => {
+  const pushHistory = useCallback(
+    (nextNodes, nextEdges) => {
+      const h = historyRef.current;
+      const sig = makeSig(nextNodes, nextEdges);
+
+      if (sig === h.lastSig) return;
+
+      h.past.push({
+        nodes: deepCopy(nodes),
+        edges: deepCopy(edges),
+      });
+
+      if (h.past.length > MAX_HISTORY) h.past.shift();
+
+      h.future = [];
+      h.lastSig = sig;
+      setHistoryTick((t) => t + 1);
+    },
+    [nodes, edges]
+  );
+
+  const undo = useCallback(() => {
     const h = historyRef.current;
-    const sig = makeSig(nextNodes, nextEdges);
+    if (!h.past.length) return;
 
-    if (sig === h.lastSig) return;
+    const prev = h.past.pop();
+
+    h.future.push({
+      nodes: deepCopy(nodes),
+      edges: deepCopy(edges),
+    });
+
+    setNodes(prev.nodes);
+    setEdges(prev.edges);
+    h.lastSig = makeSig(prev.nodes, prev.edges);
+    setHistoryTick((t) => t + 1);
+  }, [nodes, edges]);
+
+  const redo = useCallback(() => {
+    const h = historyRef.current;
+    if (!h.future.length) return;
+
+    const next = h.future.pop();
 
     h.past.push({
       nodes: deepCopy(nodes),
       edges: deepCopy(edges),
     });
 
-    if (h.past.length > MAX_HISTORY) h.past.shift();
+    setNodes(next.nodes);
+    setEdges(next.edges);
+    h.lastSig = makeSig(next.nodes, next.edges);
+    setHistoryTick((t) => t + 1);
+  }, [nodes, edges]);
 
-    h.future = [];
-    h.lastSig = sig;
-  },
-  [nodes, edges]
-);
-
-const canUndo = historyRef.current.past.length > 0;
-const canRedo = historyRef.current.future.length > 0;
-
-const undo = useCallback(() => {
-  const h = historyRef.current;
-  if (!h.past.length) return;
-
-  const prev = h.past.pop();
-
-  h.future.push({
-    nodes: deepCopy(nodes),
-    edges: deepCopy(edges),
-  });
-
-  setNodes(prev.nodes);
-  setEdges(prev.edges);
-  h.lastSig = makeSig(prev.nodes, prev.edges);
-}, [nodes, edges]);
-
-const redo = useCallback(() => {
-  const h = historyRef.current;
-  if (!h.future.length) return;
-
-  const next = h.future.pop();
-
-  h.past.push({
-    nodes: deepCopy(nodes),
-    edges: deepCopy(edges),
-  });
-
-  setNodes(next.nodes);
-  setEdges(next.edges);
-  h.lastSig = makeSig(next.nodes, next.edges);
-}, [nodes, edges]);
-// === NF-UNDOREDO-ENGINE-END ===
+  const canUndo = useMemo(() => historyRef.current.past.length > 0, [historyTick]);
+  const canRedo = useMemo(() => historyRef.current.future.length > 0, [historyTick]);
+  // === NF-UNDOREDO-ENGINE-END ===
 
   const [selectedNodeId, setSelectedNodeId] = useState(null);
   const [selectedEdgeId, setSelectedEdgeId] = useState(null);
@@ -414,11 +390,13 @@ const redo = useCallback(() => {
 
   const edgeTypes = useMemo(() => ({ nf: NodeflowEdge }), []);
 
-  
-
   // reset "fit done" when switching projects
   useEffect(() => {
     didFitRef.current = false;
+
+    // сбрасываем историю при смене проекта (иначе undo/redo будет путаться между проектами)
+    historyRef.current = { past: [], future: [], lastSig: "" };
+    setHistoryTick((t) => t + 1);
   }, [gKey]);
 
   // load graph
@@ -467,7 +445,6 @@ const redo = useCallback(() => {
     if (didFitRef.current) return;
     if (!rfRef.current) return;
 
-    // even empty graph should have stable viewport
     requestAnimationFrame(() => {
       rfRef.current?.fitView({ padding: 0.25, duration: 0 });
       didFitRef.current = true;
@@ -482,57 +459,85 @@ const redo = useCallback(() => {
     } catch {}
   }, [gKey, nodes, edges]);
 
-  // === NF-ONNODESCHANGE-START ===
-const onNodesChange = useCallback(
-  (changes) => {
-    const meaningful = changes.some(
-      (c) =>
-        c.type === "position" ||
-        c.type === "dimensions" ||
-        c.type === "remove" ||
-        c.type === "add"
-    );
+  // === NF-HOTKEYS-START ===
+  // (ВАЖНО: стоит ПОСЛЕ объявления undo/redo)
+  useEffect(() => {
+    const handler = (e) => {
+      const isMac = /Mac|iPhone|iPad/.test(navigator.platform);
+      const mod = isMac ? e.metaKey : e.ctrlKey;
+      if (!mod) return;
 
-    setNodes((nds) => {
-      const next = applyNodeChanges(changes, nds);
-      if (meaningful) pushHistory(next, edges);
-      return next;
-    });
-  },
-  [pushHistory, edges]
-);
-// === NF-ONNODESCHANGE-END ===
+      const key = e.key.toLowerCase();
+
+      if (key === "z" && !e.shiftKey) {
+        e.preventDefault();
+        undo();
+      }
+
+      if (key === "z" && e.shiftKey) {
+        e.preventDefault();
+        redo();
+      }
+    };
+
+    window.addEventListener("keydown", handler, { passive: false });
+    return () => window.removeEventListener("keydown", handler);
+  }, [undo, redo]);
+  // === NF-HOTKEYS-END ===
+
+  // === NF-ONNODESCHANGE-START ===
+  const onNodesChange = useCallback(
+    (changes) => {
+      const meaningful = changes.some(
+        (c) =>
+          c.type === "position" ||
+          c.type === "dimensions" ||
+          c.type === "remove" ||
+          c.type === "add"
+      );
+
+      setNodes((nds) => {
+        const next = applyNodeChanges(changes, nds);
+        if (meaningful) pushHistory(next, edges);
+        return next;
+      });
+    },
+    [pushHistory, edges]
+  );
+  // === NF-ONNODESCHANGE-END ===
 
   // === NF-ONEDGESCHANGE-START ===
-const onEdgesChange = useCallback(
-  (changes) => {
-    const meaningful = changes.some((c) => c.type === "remove" || c.type === "add");
+  const onEdgesChange = useCallback(
+    (changes) => {
+      const meaningful = changes.some((c) => c.type === "remove" || c.type === "add");
 
-    setEdges((eds) => {
-      const next = applyEdgeChanges(changes, eds);
-      if (meaningful) pushHistory(nodes, next);
-      return next;
-    });
-  },
-  [pushHistory, nodes]
-);
-// === NF-ONEDGESCHANGE-END ===
+      setEdges((eds) => {
+        const next = applyEdgeChanges(changes, eds);
+        if (meaningful) pushHistory(nodes, next);
+        return next;
+      });
+    },
+    [pushHistory, nodes]
+  );
+  // === NF-ONEDGESCHANGE-END ===
 
-// === NF-ONCONNECT-START ===
-const onConnect = useCallback(
-  (params) => {
-    setEdges((eds) => {
-      const next = addEdge(params, eds);
-      pushHistory(nodes, next);
-      return next;
-    });
-  },
-  [pushHistory, nodes]
-);
-// === NF-ONCONNECT-END ===
-
+  // === NF-ONCONNECT-START ===
+  const onConnect = useCallback(
+    (params) => {
+      setEdges((eds) => {
+        const next = addEdge(params, eds);
+        pushHistory(nodes, next);
+        return next;
+      });
+    },
+    [pushHistory, nodes]
+  );
+  // === NF-ONCONNECT-END ===
 
   function addNode() {
+    // фикс: добавление ноды — это значимое действие, пишем в историю
+    pushHistory(nodes, edges);
+
     const id = crypto.randomUUID();
     const newNode = {
       id,
@@ -543,7 +548,6 @@ const onConnect = useCallback(
     setNodes((prev) => [newNode, ...prev]);
     setSelectedNodeId(id);
 
-    // keep minimap sane after adding
     didFitRef.current = false;
   }
 
@@ -554,6 +558,10 @@ const onConnect = useCallback(
 
   function updateSelectedNode(patch) {
     if (!selectedNodeId) return;
+
+    // фикс: изменение data ноды — тоже значимое действие
+    pushHistory(nodes, edges);
+
     setNodes((prev) =>
       prev.map((n) => (n.id !== selectedNodeId ? n : { ...n, data: { ...n.data, ...patch } }))
     );
@@ -562,6 +570,10 @@ const onConnect = useCallback(
 
   function deleteSelectedNode() {
     if (!selectedNodeId) return;
+
+    // фикс: удаление — значимое действие
+    pushHistory(nodes, edges);
+
     setNodes((prev) => prev.filter((n) => n.id !== selectedNodeId));
     setEdges((prev) => prev.filter((e) => e.source !== selectedNodeId && e.target !== selectedNodeId));
     setSelectedNodeId(null);
@@ -570,6 +582,10 @@ const onConnect = useCallback(
 
   function deleteSelectedEdge() {
     if (!selectedEdgeId) return;
+
+    // фикс: удаление edge — значимое действие
+    pushHistory(nodes, edges);
+
     setEdges((prev) => prev.filter((e) => e.id !== selectedEdgeId));
     setSelectedEdgeId(null);
   }
@@ -747,49 +763,48 @@ const onConnect = useCallback(
           }
         `}</style>
 
-{/* === NF-HISTORY-UI-START === */}
-<div
-  style={{
-    position: "absolute",
-    top: 12,
-    left: 12,
-    zIndex: 50,
-    display: "flex",
-    gap: 8,
-  }}
->
-  <button
-    onClick={undo}
-    disabled={!canUndo}
-    style={{
-      padding: "8px 10px",
-      borderRadius: 10,
-      border: "1px solid rgba(255,255,255,0.12)",
-      background: "rgba(0,0,0,0.35)",
-      color: "white",
-      opacity: canUndo ? 1 : 0.5,
-    }}
-  >
-    Undo
-  </button>
+        {/* === NF-HISTORY-UI-START === */}
+        <div
+          style={{
+            position: "absolute",
+            top: 12,
+            left: 12,
+            zIndex: 50,
+            display: "flex",
+            gap: 8,
+          }}
+        >
+          <button
+            onClick={undo}
+            disabled={!canUndo}
+            style={{
+              padding: "8px 10px",
+              borderRadius: 10,
+              border: "1px solid rgba(255,255,255,0.12)",
+              background: "rgba(0,0,0,0.35)",
+              color: "white",
+              opacity: canUndo ? 1 : 0.5,
+            }}
+          >
+            Undo
+          </button>
 
-  <button
-    onClick={redo}
-    disabled={!canRedo}
-    style={{
-      padding: "8px 10px",
-      borderRadius: 10,
-      border: "1px solid rgba(255,255,255,0.12)",
-      background: "rgba(0,0,0,0.35)",
-      color: "white",
-      opacity: canRedo ? 1 : 0.5,
-    }}
-  >
-    Redo
-  </button>
-</div>
-{/* === NF-HISTORY-UI-END === */}
-
+          <button
+            onClick={redo}
+            disabled={!canRedo}
+            style={{
+              padding: "8px 10px",
+              borderRadius: 10,
+              border: "1px solid rgba(255,255,255,0.12)",
+              background: "rgba(0,0,0,0.35)",
+              color: "white",
+              opacity: canRedo ? 1 : 0.5,
+            }}
+          >
+            Redo
+          </button>
+        </div>
+        {/* === NF-HISTORY-UI-END === */}
 
         <ReactFlow
           nodes={nodes}
@@ -802,7 +817,6 @@ const onConnect = useCallback(
           onEdgesChange={onEdgesChange}
           onInit={(instance) => {
             rfRef.current = instance;
-            // ensure minimap/viewport is correct right after init
             didFitRef.current = false;
           }}
           onConnect={onConnect}
@@ -865,8 +879,6 @@ const onConnect = useCallback(
               </div>
             )}
           </div>
-
-          
         </ReactFlow>
       </div>
 
