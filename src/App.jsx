@@ -5,6 +5,7 @@ import ReactFlow, {
   Background,
   Controls,
   MiniMap,
+  Panel,
   addEdge,
   applyEdgeChanges,
   applyNodeChanges,
@@ -14,6 +15,7 @@ import ReactFlow, {
   BaseEdge,
   getBezierPath,
 } from "reactflow";
+
 import "reactflow/dist/style.css";
 
 // ---------- Telegram ----------
@@ -768,75 +770,67 @@ function App() {
             )}
           </div>
 
-          {/* MiniMap + Toggle */}
-          <div
-            style={{
-              position: "absolute",
-              right: 12,
-              bottom: 12,
-              zIndex: 10,
-              pointerEvents: "auto",
-            }}
-          >
-            <button
-              onClick={() => setShowMiniMap((v) => !v)}
-              style={{
-                position: "absolute",
-                right: 8,
-                bottom: showMiniMap ? 74 : 8,
-                width: 28,
-                height: 28,
-                borderRadius: 10,
-                border: "1px solid rgba(183,183,183,0.18)",
-                background: "rgba(23,23,23,0.92)",
-                color: "#FFFFFF",
-                fontWeight: 900,
-                lineHeight: "26px",
-                zIndex: 9999,
-              }}
-              aria-label="Toggle minimap"
-            >
-              {showMiniMap ? "_" : "▢"}
-            </button>
+          <Panel position="bottom-right">
+  <div style={{ position: "relative", pointerEvents: "auto" }}>
+    {/* кнопка */}
+    <button
+      onClick={() => setShowMiniMap((v) => !v)}
+      style={{
+        position: "absolute",
+        right: 8,
+        top: 8,
+        width: 28,
+        height: 28,
+        borderRadius: 10,
+        border: "1px solid rgba(183,183,183,0.18)",
+        background: "rgba(23,23,23,0.92)",
+        color: "#FFFFFF",
+        fontWeight: 900,
+        lineHeight: "26px",
+        zIndex: 2,
+      }}
+      aria-label="Toggle minimap"
+    >
+      {showMiniMap ? "—" : "▢"}
+    </button>
 
-            <div
-              style={{
-                width: showMiniMap ? 150 : 54,
-                padding: showMiniMap ? 1 : 0,
-                backgroundClip: "padding-box",
-                boxSizing: "border-box",
-                height: showMiniMap ? 110 : 44,
-                borderRadius: 14,
-                overflow: "hidden",
-                border: "1px solid rgba(183,183,183,0.18)",
-                background: "rgba(23,23,23,0.92)",
-                boxShadow: "0 10px 30px rgba(0,0,0,0.35)",
-                position: "relative",
-                transition: "width 120ms ease, height 120ms ease",
-              }}
-            >
-              {showMiniMap && (
-                <MiniMap
-  style={{ width: "100%", height: "100%" }}
-  zoomable={false}
-  pannable={false}
-  nodeBorderRadius={6}
-  nodeColor={(n) => {
-    if (n.selected) return "#6F42FF";
-    const st = n?.data?.status;
-    if (st === "active") return "#00C2FF";
-    if (st === "done") return "rgba(183,183,183,0.55)";
-    return "rgba(183,183,183,0.85)";
-  }}
-  nodeStrokeColor={(n) =>
-    n.selected ? "#6F42FF" : "rgba(255,255,255,0.10)"
-  }
-  nodeStrokeWidth={2}
-/>
+    {/* контейнер миникарты */}
+    <div
+      style={{
+        width: showMiniMap ? 160 : 54,
+        height: showMiniMap ? 120 : 44,
+        borderRadius: 14,
+        overflow: "hidden",
+        border: "1px solid rgba(183,183,183,0.18)",
+        background: "rgba(23,23,23,0.92)",
+        boxShadow: "0 10px 30px rgba(0,0,0,0.35)",
+        transition: "width 120ms ease, height 120ms ease",
+      }}
+    >
+      {showMiniMap && (
+        <MiniMap
+          style={{ width: "100%", height: "100%" }}
+          zoomable={false}
+          pannable={false}
+          maskColor="rgba(15,15,16,0.55)"
+          nodeBorderRadius={6}
+          nodeColor={(n) => {
+            if (n.selected) return "#6F42FF";
+            const st = n?.data?.status;
+            if (st === "active") return "#00C2FF";
+            if (st === "done") return "rgba(183,183,183,0.55)";
+            return "rgba(183,183,183,0.85)";
+          }}
+          nodeStrokeColor={(n) =>
+            n.selected ? "#6F42FF" : "rgba(255,255,255,0.10)"
+          }
+          nodeStrokeWidth={2}
+        />
+      )}
+    </div>
+  </div>
+</Panel>
 
-              )}
-            </div>
-          </div>
         </ReactFlow>
       </div>
 
