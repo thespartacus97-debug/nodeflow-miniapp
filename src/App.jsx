@@ -734,12 +734,27 @@ function App() {
   const [showMiniMap, setShowMiniMap] = useState(true);
   const [showControls, setShowControls] = useState(true);
   const [isDetailsCollapsed, setIsDetailsCollapsed] = useState(false);
+  const [isNotesFullscreen, setIsNotesFullscreen] = useState(false);
 
   const rfRef = useRef(null);
   const didFitRef = useRef(false);
 
   // === Node details (notes + images) state ===
   const [previewUrl, setPreviewUrl] = useState(null);
+  const previewImgRef = useRef(null);
+
+const enterFullscreen = (el) => {
+  if (!el) return;
+  const anyEl = el;
+
+  const req =
+    anyEl.requestFullscreen ||
+    anyEl.webkitRequestFullscreen ||
+    anyEl.msRequestFullscreen;
+
+  if (req) req.call(anyEl);
+};
+
   const imageUrlCacheRef = useRef(new Map());
   const fileInputRef = useRef(null);
 
@@ -1344,34 +1359,160 @@ function App() {
           }}
         />
 
+
+
         {/* Preview modal */}
-        {previewUrl && (
-          <div
-            onClick={() => setPreviewUrl(null)}
-            style={{
-              position: "absolute",
-              inset: 0,
-              zIndex: 200,
-              background: "rgba(0,0,0,0.72)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: 16,
-            }}
-          >
-            <img
-              src={previewUrl}
-              alt="preview"
-              style={{
-                maxWidth: "100%",
-                maxHeight: "100%",
-                borderRadius: 14,
-                border: "1px solid rgba(255,255,255,0.12)",
-              }}
-              onClick={(ev) => ev.stopPropagation()}
-            />
-          </div>
-        )}
+{previewUrl && (
+  <div
+    onClick={() => setPreviewUrl(null)}
+    style={{
+      position: "absolute",
+      inset: 0,
+      zIndex: 200,
+      background: "rgba(0,0,0,0.72)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 16,
+    }}
+  >
+    <div
+      onClick={(ev) => ev.stopPropagation()}
+      style={{
+        position: "relative",
+        maxWidth: "100%",
+        maxHeight: "100%",
+      }}
+    >
+
+{/* Notes fullscreen modal */}
+{isNotesFullscreen && selectedNode && (
+  <div
+    onClick={() => setIsNotesFullscreen(false)}
+    style={{
+      position: "absolute",
+      inset: 0,
+      zIndex: 220,
+      background: "rgba(0,0,0,0.78)",
+      padding: 16,
+      display: "flex",
+      flexDirection: "column",
+      gap: 12,
+    }}
+  >
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <div style={{ color: "#fff", fontWeight: 900, fontSize: 16 }}>Notes</div>
+
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          setIsNotesFullscreen(false);
+        }}
+        style={{
+          width: 40,
+          height: 40,
+          borderRadius: 12,
+          border: "1px solid rgba(255,255,255,0.18)",
+          background: "rgba(0,0,0,0.55)",
+          color: "#fff",
+          fontWeight: 900,
+          cursor: "pointer",
+        }}
+        aria-label="Close notes"
+        title="Close"
+      >
+        ✕
+      </button>
+    </div>
+
+    <textarea
+      value={selectedNode.data?.notes || ""}
+      onChange={(e) => updateSelectedNodeNotes(e.target.value, { commit: false })}
+      onBlur={(e) => updateSelectedNodeNotes(e.target.value, { commit: true })}
+      placeholder="Notes"
+      style={{
+        flex: 1,
+        width: "100%",
+        padding: 12,
+        borderRadius: 14,
+        border: "1px solid rgba(255,255,255,0.16)",
+        outline: "none",
+        background: "#ffffff",
+        color: "#111111",
+        fontSize: 16,
+        lineHeight: 1.4,
+        resize: "none",
+        fontFamily: "Arial, sans-serif",
+      }}
+      onClick={(e) => e.stopPropagation()}
+    />
+  </div>
+)}
+
+
+      {/* buttons */}
+      <div
+        style={{
+          position: "absolute",
+          top: 10,
+          right: 10,
+          zIndex: 5,
+          display: "flex",
+          gap: 8,
+        }}
+      >
+        <button
+          onClick={() => setPreviewUrl(null)}
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 12,
+            border: "1px solid rgba(255,255,255,0.18)",
+            background: "rgba(0,0,0,0.55)",
+            color: "#fff",
+            fontWeight: 900,
+            cursor: "pointer",
+          }}
+          aria-label="Close image"
+          title="Close"
+        >
+          ✕
+        </button>
+
+        <button
+          onClick={() => enterFullscreen(previewImgRef.current)}
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 12,
+            border: "1px solid rgba(255,255,255,0.18)",
+            background: "rgba(0,0,0,0.55)",
+            color: "#fff",
+            fontWeight: 900,
+            cursor: "pointer",
+          }}
+          aria-label="Fullscreen"
+          title="Fullscreen"
+        >
+          ⤢
+        </button>
+      </div>
+
+      <img
+        ref={previewImgRef}
+        src={previewUrl}
+        alt="preview"
+        style={{
+          maxWidth: "100%",
+          maxHeight: "100%",
+          borderRadius: 14,
+          border: "1px solid rgba(255,255,255,0.12)",
+          display: "block",
+        }}
+      />
+    </div>
+  </div>
+)}
 
         <ReactFlow
           nodes={nodes}
@@ -1473,7 +1614,7 @@ overflow: "visible",
     onClick={() => setIsDetailsCollapsed((v) => !v)}
     style={{
       position: "absolute",
-      top: 8,
+      top: 11,
       left: "50%",
       transform: "translateX(-50%)",
       height: 28,
@@ -1543,24 +1684,53 @@ overflow: "visible",
             />
 
             {/* Notes */}
-            <textarea
-              value={selectedNode.data?.notes || ""}
-              onChange={(e) => updateSelectedNodeNotes(e.target.value, { commit: false })}
-onBlur={(e) => updateSelectedNodeNotes(e.target.value, { commit: true })}
+<div style={{ position: "relative" }}>
+  <textarea
+    value={selectedNode.data?.notes || ""}
+    onChange={(e) => updateSelectedNodeNotes(e.target.value, { commit: false })}
+    onBlur={(e) => updateSelectedNodeNotes(e.target.value, { commit: true })}
+    placeholder="Notes (internal text, not shown on the node)"
+    rows={5}
+    style={{
+      padding: 10,
+      borderRadius: 10,
+      border: "1px solid rgba(255,255,255,0.12)",
+      outline: "none",
+      background: "#FFFFFF",
+      color: "#111111",
+      resize: "vertical",
+      fontFamily: "Arial, sans-serif",
+      width: "100%",
+      boxSizing: "border-box",
+    }}
+  />
 
-              placeholder="Notes (internal text, not shown on the node)"
-              rows={5}
-              style={{
-                padding: 10,
-                borderRadius: 10,
-                border: "1px solid rgba(255,255,255,0.12)",
-                outline: "none",
-                background: "#FFFFFF",
-                color: "#111111",
-                resize: "vertical",
-                fontFamily: "Arial, sans-serif",
-              }}
-            />
+  {/* fullscreen button (bottom-left) */}
+  <button
+    onClick={() => setIsNotesFullscreen(true)}
+    style={{
+      position: "absolute",
+      left: 8,
+      bottom: 8,
+      width: 34,
+      height: 34,
+      borderRadius: 10,
+      border: "1px solid rgba(0,0,0,0.12)",
+      background: "rgba(255,255,255,0.88)",
+      color: "#111",
+      fontWeight: 900,
+      cursor: "pointer",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+    }}
+    aria-label="Fullscreen notes"
+    title="Fullscreen"
+  >
+    ⤢
+  </button>
+</div>
+
 
             <div style={{ display: "flex", gap: 8 }}>
               {["idea", "active", "done"].map((s) => (
