@@ -734,13 +734,16 @@ function App() {
   const [showMiniMap, setShowMiniMap] = useState(true);
   const [showControls, setShowControls] = useState(true);
   const [isDetailsCollapsed, setIsDetailsCollapsed] = useState(false);
-  const [isNotesFullscreen, setIsNotesFullscreen] = useState(false);
+  
 
   const rfRef = useRef(null);
   const didFitRef = useRef(false);
 
   // === Node details (notes + images) state ===
   const [previewUrl, setPreviewUrl] = useState(null);
+  const [isPreviewExpanded, setIsPreviewExpanded] = useState(false);
+
+
   const previewImgRef = useRef(null);
 
 const enterFullscreen = (el) => {
@@ -778,6 +781,28 @@ const enterFullscreen = (el) => {
       cache.delete(imageId);
     }
   }, []);
+
+  const openPreview = useCallback((url) => {
+  setIsNotesFullscreen(false);      // чтобы notes не мешал
+  setIsPreviewExpanded(false);      // сначала обычный размер
+  setPreviewUrl(url);
+}, []);
+
+const closePreview = useCallback(() => {
+  setPreviewUrl(null);
+  setIsPreviewExpanded(false);
+}, []);
+
+const openNotesFullscreen = useCallback(() => {
+  setPreviewUrl(null);              // чтобы фото не мешало
+  setIsPreviewExpanded(false);
+  setIsNotesFullscreen(true);
+}, []);
+
+const closeNotesFullscreen = useCallback(() => {
+  setIsNotesFullscreen(false);
+}, []);
+
 
   useEffect(() => {
     return () => {
@@ -1361,42 +1386,109 @@ const enterFullscreen = (el) => {
 
 
 
-        {/* Preview modal */}
+    {/* Preview modal */}
 {previewUrl && (
   <div
-    onClick={() => setPreviewUrl(null)}
+    onClick={closePreview}
     style={{
       position: "absolute",
       inset: 0,
-      zIndex: 200,
+      zIndex: 260,
       background: "rgba(0,0,0,0.72)",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      padding: 16,
+      padding: isPreviewExpanded ? 0 : 16,
     }}
   >
     <div
       onClick={(ev) => ev.stopPropagation()}
       style={{
         position: "relative",
-        maxWidth: "100%",
-        maxHeight: "100%",
+        width: isPreviewExpanded ? "100vw" : "min(92vw, 520px)",
+        height: isPreviewExpanded ? "100dvh" : "auto",
+        maxHeight: isPreviewExpanded ? "100dvh" : "72dvh",
+        borderRadius: isPreviewExpanded ? 0 : 18,
+        overflow: "hidden",
+        border: "1px solid rgba(255,255,255,0.14)",
+        background: "rgba(0,0,0,0.35)",
       }}
     >
+      {/* buttons */}
+      <div
+        style={{
+          position: "absolute",
+          top: 10,
+          right: 10,
+          zIndex: 5,
+          display: "flex",
+          gap: 8,
+        }}
+      >
+        <button
+          onClick={closePreview}
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 12,
+            border: "1px solid rgba(255,255,255,0.18)",
+            background: "rgba(0,0,0,0.55)",
+            color: "#fff",
+            fontWeight: 900,
+            cursor: "pointer",
+          }}
+          aria-label="Close image"
+          title="Close"
+        >
+          ✕
+        </button>
+
+        <button
+          onClick={() => setIsPreviewExpanded((v) => !v)}
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 12,
+            border: "1px solid rgba(255,255,255,0.18)",
+            background: "rgba(0,0,0,0.55)",
+            color: "#fff",
+            fontWeight: 900,
+            cursor: "pointer",
+          }}
+          aria-label="Toggle expand"
+          title={isPreviewExpanded ? "Minimize" : "Expand"}
+        >
+          ⤢
+        </button>
+      </div>
+
+      <img
+        src={previewUrl}
+        alt="preview"
+        style={{
+          width: "100%",
+          height: isPreviewExpanded ? "100%" : "auto",
+          maxHeight: isPreviewExpanded ? "100%" : "72dvh",
+          objectFit: "contain",
+          display: "block",
+        }}
+      />
+    </div>
+  </div>
+)}
 
 {/* Notes fullscreen modal */}
 {isNotesFullscreen && selectedNode && (
   <div
-    onClick={() => setIsNotesFullscreen(false)}
+    onClick={closeNotesFullscreen}
     style={{
       position: "absolute",
       inset: 0,
-      zIndex: 220,
-      background: "rgba(0,0,0,0.78)",
-      padding: 16,
+      zIndex: 300,
+      background: "rgba(0,0,0,0.86)",
       display: "flex",
       flexDirection: "column",
+      padding: 14,
       gap: 12,
     }}
   >
@@ -1406,7 +1498,7 @@ const enterFullscreen = (el) => {
       <button
         onClick={(e) => {
           e.stopPropagation();
-          setIsNotesFullscreen(false);
+          closeNotesFullscreen();
         }}
         style={{
           width: 40,
@@ -1449,70 +1541,6 @@ const enterFullscreen = (el) => {
   </div>
 )}
 
-
-      {/* buttons */}
-      <div
-        style={{
-          position: "absolute",
-          top: 10,
-          right: 10,
-          zIndex: 5,
-          display: "flex",
-          gap: 8,
-        }}
-      >
-        <button
-          onClick={() => setPreviewUrl(null)}
-          style={{
-            width: 36,
-            height: 36,
-            borderRadius: 12,
-            border: "1px solid rgba(255,255,255,0.18)",
-            background: "rgba(0,0,0,0.55)",
-            color: "#fff",
-            fontWeight: 900,
-            cursor: "pointer",
-          }}
-          aria-label="Close image"
-          title="Close"
-        >
-          ✕
-        </button>
-
-        <button
-          onClick={() => enterFullscreen(previewImgRef.current)}
-          style={{
-            width: 36,
-            height: 36,
-            borderRadius: 12,
-            border: "1px solid rgba(255,255,255,0.18)",
-            background: "rgba(0,0,0,0.55)",
-            color: "#fff",
-            fontWeight: 900,
-            cursor: "pointer",
-          }}
-          aria-label="Fullscreen"
-          title="Fullscreen"
-        >
-          ⤢
-        </button>
-      </div>
-
-      <img
-        ref={previewImgRef}
-        src={previewUrl}
-        alt="preview"
-        style={{
-          maxWidth: "100%",
-          maxHeight: "100%",
-          borderRadius: 14,
-          border: "1px solid rgba(255,255,255,0.12)",
-          display: "block",
-        }}
-      />
-    </div>
-  </div>
-)}
 
         <ReactFlow
           nodes={nodes}
@@ -1707,7 +1735,8 @@ overflow: "visible",
 
   {/* fullscreen button (bottom-left) */}
   <button
-    onClick={() => setIsNotesFullscreen(true)}
+    onOpen={(url) => openPreview(url)}
+
     style={{
       position: "absolute",
       left: 8,
@@ -1786,7 +1815,8 @@ overflow: "visible",
         key={imgId}
         imageId={imgId}
         getUrl={getImageObjectUrl}
-        onOpen={(url) => setPreviewUrl(url)}
+        onOpen={(url) => openPreview(url)}
+
         onDelete={() => deleteImageFromSelectedNode(imgId)}
       />
     ))}
