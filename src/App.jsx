@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import ReactFlow, {
+  useReactFlow,
   Background,
   Controls,
   MiniMap,
@@ -15,6 +16,7 @@ import ReactFlow, {
   BaseEdge,
   getBezierPath,
 } from "reactflow";
+const { fitView } = useReactFlow();
 
 import "reactflow/dist/style.css";
 
@@ -374,6 +376,10 @@ function App() {
 
       setNodes(safeNodes);
       setEdges(safeEdges);
+      requestAnimationFrame(() => {
+  fitView({ padding: 0.2, duration: 0 });
+});
+
     } catch {
       setNodes([]);
       setEdges([]);
@@ -703,7 +709,7 @@ function App() {
             setSelectedEdgeId(edge.id);
             setSelectedNodeId(null);
           }}
-          fitView
+      
           minZoom={0.15}
           maxZoom={2}
           zoomOnPinch={true}
