@@ -1,6 +1,6 @@
 // TEST-MARK-XYZ
 
-import { useEffect, useMemo, useState, useCallback } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import ReactFlow, {
   Background,
   Controls,
@@ -14,10 +14,9 @@ import ReactFlow, {
   BaseEdge,
   getBezierPath,
 } from "reactflow";
+import "reactflow/dist/style.css";
 
-
-
-
+// ---------- Telegram ----------
 const tg = window.Telegram?.WebApp;
 if (tg) {
   tg.ready();
@@ -33,16 +32,19 @@ const theme = {
   border: isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.12)",
   btnBg: isDark ? "#ffffff" : "#111111",
   btnText: isDark ? "#111111" : "#ffffff",
-  inputBg: isDark ? "#ffffff" : "#ffffff",
+  inputBg: "#ffffff",
   inputText: "#111111",
 };
 
+// ---------- Storage keys ----------
 function projectsStorageKey(userId) {
   return `nodeflow:projects:${userId || "guest"}`;
 }
 function graphStorageKey(userId, projectId) {
   return `nodeflow:graph:${userId || "guest"}:${projectId}`;
 }
+
+// ---------- Edge ----------
 function NodeflowEdge(props) {
   const {
     sourceX,
@@ -64,9 +66,9 @@ function NodeflowEdge(props) {
     targetPosition,
   });
 
-  // Широкая "невидимая" зона нажатия для пальца
   return (
     <>
+      {/* Wide invisible tap zone */}
       <path
         d={path}
         fill="none"
@@ -86,6 +88,7 @@ function NodeflowEdge(props) {
   );
 }
 
+// ---------- Node ----------
 function NodeCard({ data, selected, linkMode }) {
   const status = data?.status || "idea";
   const title = data?.title || "Untitled";
@@ -94,13 +97,11 @@ function NodeCard({ data, selected, linkMode }) {
   const border = selected ? "#6F42FF" : "rgba(255,255,255,0.10)";
   const titleColor = "#FFFFFF";
   const metaColor = "rgba(255,255,255,0.65)";
+  const statusChipBg = "rgba(255,255,255,0.10)";
 
   const statusLabel =
     status === "done" ? "done" : status === "active" ? "active" : "idea";
 
-  const statusChipBg = "rgba(255,255,255,0.10)";
-
-  // Видимая точка (показываем только в Link mode)
   const dotStyle = {
     width: 10,
     height: 10,
@@ -111,7 +112,6 @@ function NodeCard({ data, selected, linkMode }) {
     opacity: linkMode ? 1 : 0,
   };
 
-  // Большая зона касания (но в Link OFF она не ловит палец)
   const baseHandle = {
     width: 34,
     height: 34,
@@ -121,7 +121,7 @@ function NodeCard({ data, selected, linkMode }) {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    pointerEvents: linkMode ? "all" : "none", // 🔥 главное: не мешает drag в Link OFF
+    pointerEvents: linkMode ? "all" : "none",
   };
 
   return (
@@ -136,7 +136,7 @@ function NodeCard({ data, selected, linkMode }) {
         position: "relative",
       }}
     >
-      {/* ✅ Приёмник на всю ноду (существует ВСЕГДА, чтобы edges не пропадали) */}
+      {/* Receiver across full node (for easy magnet), but non-blocking in Link OFF */}
       <Handle
         type="target"
         position={Position.Left}
@@ -155,82 +155,35 @@ function NodeCard({ data, selected, linkMode }) {
         }}
       />
 
-      {/* ==== 4 target-точки (куда приходит связь) ==== */}
-<Handle
-  type="target"
-  position={Position.Left}
-  id="t-left"
-  style={{ ...baseHandle, left: -17 }}
->
-  <div style={dotStyle} />
-</Handle>
+      {/* 4 target handles */}
+      <Handle type="target" position={Position.Left} id="t-left" style={{ ...baseHandle, left: -17 }}>
+        <div style={dotStyle} />
+      </Handle>
+      <Handle type="target" position={Position.Right} id="t-right" style={{ ...baseHandle, right: -17 }}>
+        <div style={dotStyle} />
+      </Handle>
+      <Handle type="target" position={Position.Top} id="t-top" style={{ ...baseHandle, top: -17 }}>
+        <div style={dotStyle} />
+      </Handle>
+      <Handle type="target" position={Position.Bottom} id="t-bottom" style={{ ...baseHandle, bottom: -17 }}>
+        <div style={dotStyle} />
+      </Handle>
 
-<Handle
-  type="target"
-  position={Position.Right}
-  id="t-right"
-  style={{ ...baseHandle, right: -17 }}
->
-  <div style={dotStyle} />
-</Handle>
+      {/* 4 source handles */}
+      <Handle type="source" position={Position.Left} id="s-left" style={{ ...baseHandle, left: -17 }}>
+        <div style={dotStyle} />
+      </Handle>
+      <Handle type="source" position={Position.Right} id="s-right" style={{ ...baseHandle, right: -17 }}>
+        <div style={dotStyle} />
+      </Handle>
+      <Handle type="source" position={Position.Top} id="s-top" style={{ ...baseHandle, top: -17 }}>
+        <div style={dotStyle} />
+      </Handle>
+      <Handle type="source" position={Position.Bottom} id="s-bottom" style={{ ...baseHandle, bottom: -17 }}>
+        <div style={dotStyle} />
+      </Handle>
 
-<Handle
-  type="target"
-  position={Position.Top}
-  id="t-top"
-  style={{ ...baseHandle, top: -17 }}
->
-  <div style={dotStyle} />
-</Handle>
-
-<Handle
-  type="target"
-  position={Position.Bottom}
-  id="t-bottom"
-  style={{ ...baseHandle, bottom: -17 }}
->
-  <div style={dotStyle} />
-</Handle>
-
-{/* ==== 4 источника (откуда тянем связь) ==== */}
-<Handle
-  type="source"
-  position={Position.Left}
-  id="s-left"
-  style={{ ...baseHandle, left: -17 }}
->
-  <div style={dotStyle} />
-</Handle>
-
-<Handle
-  type="source"
-  position={Position.Right}
-  id="s-right"
-  style={{ ...baseHandle, right: -17 }}
->
-  <div style={dotStyle} />
-</Handle>
-
-<Handle
-  type="source"
-  position={Position.Top}
-  id="s-top"
-  style={{ ...baseHandle, top: -17 }}
->
-  <div style={dotStyle} />
-</Handle>
-
-<Handle
-  type="source"
-  position={Position.Bottom}
-  id="s-bottom"
-  style={{ ...baseHandle, bottom: -17 }}
->
-  <div style={dotStyle} />
-</Handle>
-
-<div style={{ fontWeight: 800, color: titleColor, fontSize: 14 }}>
-
+      <div style={{ fontWeight: 800, color: titleColor, fontSize: 14 }}>
         {title}
       </div>
 
@@ -259,11 +212,7 @@ function NodeCard({ data, selected, linkMode }) {
   );
 }
 
-
-
-
-import React from "react";
-
+// ---------- Error boundary ----------
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
@@ -281,9 +230,19 @@ class ErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{ padding: 16, fontFamily: "Arial", background: "#0F0F10", color: "#fff", minHeight: "100dvh" }}>
+        <div
+          style={{
+            padding: 16,
+            fontFamily: "Arial",
+            background: "#0F0F10",
+            color: "#fff",
+            minHeight: "100dvh",
+          }}
+        >
           <h2 style={{ marginTop: 0 }}>Nodeflow crashed</h2>
-          <div style={{ opacity: 0.8, whiteSpace: "pre-wrap" }}>{this.state.message}</div>
+          <div style={{ opacity: 0.8, whiteSpace: "pre-wrap" }}>
+            {this.state.message}
+          </div>
           <div style={{ marginTop: 12, opacity: 0.7 }}>
             Tip: send me this error text — I’ll fix it fast.
           </div>
@@ -294,11 +253,21 @@ class ErrorBoundary extends React.Component {
   }
 }
 
+// ---------- Helpers ----------
+function nearestTargetHandle({ sourceHandle }) {
+  if (sourceHandle === "s-right") return "t-left";
+  if (sourceHandle === "s-left") return "t-right";
+  if (sourceHandle === "s-top") return "t-bottom";
+  if (sourceHandle === "s-bottom") return "t-top";
+  return "t-left";
+}
+
+// ---------- App ----------
 function App() {
   const user = tg?.initDataUnsafe?.user;
   const userId = user?.id;
 
-  // ---------- Projects ----------
+  // Projects
   const [projects, setProjects] = useState([]);
   const [newProjectTitle, setNewProjectTitle] = useState("");
   const [currentProject, setCurrentProject] = useState(null);
@@ -317,9 +286,7 @@ function App() {
   useEffect(() => {
     try {
       localStorage.setItem(pKey, JSON.stringify(projects));
-    } catch {
-      // ignore
-    }
+    } catch {}
   }, [pKey, projects]);
 
   function createProject() {
@@ -338,14 +305,13 @@ function App() {
 
   function deleteProject(projectId) {
     setProjects((prev) => prev.filter((p) => p.id !== projectId));
-    // граф проекта можно не удалять (не критично), но можно и удалить:
     try {
       localStorage.removeItem(graphStorageKey(userId, projectId));
     } catch {}
     if (currentProject?.id === projectId) setCurrentProject(null);
   }
 
-  // ---------- Graph (React Flow) ----------
+  // Graph
   const gKey = useMemo(
     () => (currentProject ? graphStorageKey(userId, currentProject.id) : null),
     [userId, currentProject]
@@ -355,83 +321,72 @@ function App() {
   const [edges, setEdges] = useState([]);
   const [selectedNodeId, setSelectedNodeId] = useState(null);
   const [selectedEdgeId, setSelectedEdgeId] = useState(null);
+
   const [linkMode, setLinkMode] = useState(false);
   const [showMiniMap, setShowMiniMap] = useState(true);
   const [showControls, setShowControls] = useState(true);
 
+  const nodeTypes = useMemo(
+    () => ({
+      card: (props) => <NodeCard {...props} linkMode={linkMode} />,
+    }),
+    [linkMode]
+  );
+  const edgeTypes = useMemo(() => ({ nf: NodeflowEdge }), []);
 
-  function nearestTargetHandle({ sourceHandle }) {
-  // Стараемся приходить "симметрично": справа -> слева, сверху -> сверху и т.д.
-  // Можно поменять логику позже, но это даст ровные дуги точка-в-точку.
-  if (sourceHandle === "s-right") return "t-left";
-  if (sourceHandle === "s-left") return "t-right";
-  if (sourceHandle === "s-top") return "t-bottom";
-  if (sourceHandle === "s-bottom") return "t-top";
-  return "t-left";
-}
+  // load graph
+  useEffect(() => {
+    if (!gKey) return;
 
-  const nodeTypes = useMemo(() =>  ({
-  card: (props) => <NodeCard {...props} linkMode={linkMode} />,
-}), [linkMode]);
-const edgeTypes = useMemo(() => ({ nf: NodeflowEdge }), []);
+    try {
+      const raw = localStorage.getItem(gKey);
+      if (!raw) {
+        setNodes([]);
+        setEdges([]);
+        return;
+      }
 
+      const data = JSON.parse(raw);
 
-  // load graph when project opens (with sanitizing)
-useEffect(() => {
-  if (!gKey) return;
+      const safeNodes = (Array.isArray(data.nodes) ? data.nodes : []).map((n) => {
+        const x = Number(n?.position?.x);
+        const y = Number(n?.position?.y);
 
-  try {
-    const raw = localStorage.getItem(gKey);
-    if (!raw) {
+        return {
+          ...n,
+          position: {
+            x: Number.isFinite(x) ? x : 40,
+            y: Number.isFinite(y) ? y : 40,
+          },
+          data: {
+            title: n?.data?.title || "New step",
+            status: n?.data?.status || "idea",
+          },
+          type: n?.type || "card",
+        };
+      });
+
+      const safeEdges = (Array.isArray(data.edges) ? data.edges : [])
+        .filter((e) => e && e.id && e.source && e.target)
+        .map((e) => ({ ...e, type: "nf" }));
+
+      setNodes(safeNodes);
+      setEdges(safeEdges);
+    } catch {
       setNodes([]);
       setEdges([]);
-      return;
     }
 
-    const data = JSON.parse(raw);
-
-    const safeNodes = (Array.isArray(data.nodes) ? data.nodes : []).map((n) => {
-      const x = Number(n?.position?.x);
-      const y = Number(n?.position?.y);
-
-      return {
-        ...n,
-        position: {
-          x: Number.isFinite(x) ? x : 40,
-          y: Number.isFinite(y) ? y : 40,
-        },
-        data: {
-          title: n?.data?.title || "New step",
-          status: n?.data?.status || "idea",
-        },
-        type: n?.type || "card",
-      };
-    });
-
-    const safeEdges = (Array.isArray(data.edges) ? data.edges : [])
-  .filter((e) => e && e.id && e.source && e.target)
-  .map((e) => ({ ...e, type: "nf" }));
-
-    setNodes(safeNodes);
-    setEdges(safeEdges);
-  } catch {
-    setNodes([]);
-    setEdges([]);
-  }
-
-  setSelectedNodeId(null);
-  setSelectedEdgeId(null);
-}, [gKey]);
-
+    setSelectedNodeId(null);
+    setSelectedEdgeId(null);
+  }, [gKey]);
 
   // save graph
   useEffect(() => {
     if (!gKey) return;
     try {
       localStorage.setItem(gKey, JSON.stringify({ nodes, edges }));
-    } catch {
-      // ignore
-    }
+    } catch {}
   }, [gKey, nodes, edges]);
 
   const onNodesChange = useCallback(
@@ -444,51 +399,40 @@ useEffect(() => {
     []
   );
 
- const onConnect = useCallback(
-  (connection) => {
-    if (!linkMode) return;
+  const onConnect = useCallback(
+    (connection) => {
+      if (!linkMode) return;
+      if (connection.source === connection.target) return;
 
-    // ❌ запрет соединения ноды с самой собой
-    if (connection.source === connection.target) return;
+      const sourceHandle = connection.sourceHandle || "s-right";
+      const targetHandle =
+        !connection.targetHandle || connection.targetHandle === "target-all"
+          ? nearestTargetHandle({ sourceHandle })
+          : connection.targetHandle;
 
-    const sourceHandle = connection.sourceHandle || "s-right";
-
-    // если targetHandle не задан или равен "target-all" — подменяем на нормальный
-    const targetHandle =
-      !connection.targetHandle || connection.targetHandle === "target-all"
-        ? nearestTargetHandle({ sourceHandle })
-        : connection.targetHandle;
-
-    setEdges((eds) =>
-      addEdge(
-        {
-          ...connection,
-          id: crypto.randomUUID(),
-          type: "nf",
-          sourceHandle,
-          targetHandle,
-        },
-        eds
-      )
-    );
-  },
-  [linkMode]
-);
-
-
-
+      setEdges((eds) =>
+        addEdge(
+          {
+            ...connection,
+            id: crypto.randomUUID(),
+            type: "nf",
+            sourceHandle,
+            targetHandle,
+          },
+          eds
+        )
+      );
+    },
+    [linkMode]
+  );
 
   function addNode() {
     const id = crypto.randomUUID();
     const newNode = {
       id,
       position: { x: 40, y: 40 },
-      data: {
-        title: "New step",
-        status: "idea", // idea | active | done
-      },
+      data: { title: "New step", status: "idea" },
       type: "card",
-
     };
     setNodes((prev) => [newNode, ...prev]);
     setSelectedNodeId(id);
@@ -502,39 +446,30 @@ useEffect(() => {
   function updateSelectedNode(patch) {
     if (!selectedNodeId) return;
     setNodes((prev) =>
-      prev.map((n) => {
-        if (n.id !== selectedNodeId) return n;
-        return {
-          ...n,
-          data: {
-            ...n.data,
-            ...patch,
-          },
-        };
-      })
+      prev.map((n) =>
+        n.id !== selectedNodeId
+          ? n
+          : { ...n, data: { ...n.data, ...patch } }
+      )
     );
   }
-function deleteSelectedNode() {
-  if (!selectedNodeId) return;
 
-  setNodes((prev) => prev.filter((n) => n.id !== selectedNodeId));
-  setEdges((prev) =>
-    prev.filter(
-      (e) => e.source !== selectedNodeId && e.target !== selectedNodeId
-    )
-  );
-
-  setSelectedNodeId(null);
-}
+  function deleteSelectedNode() {
+    if (!selectedNodeId) return;
+    setNodes((prev) => prev.filter((n) => n.id !== selectedNodeId));
+    setEdges((prev) =>
+      prev.filter((e) => e.source !== selectedNodeId && e.target !== selectedNodeId)
+    );
+    setSelectedNodeId(null);
+  }
 
   function deleteSelectedEdge() {
-  if (!selectedEdgeId) return;
-  setEdges((prev) => prev.filter((e) => e.id !== selectedEdgeId));
-  setSelectedEdgeId(null);
-}
+    if (!selectedEdgeId) return;
+    setEdges((prev) => prev.filter((e) => e.id !== selectedEdgeId));
+    setSelectedEdgeId(null);
+  }
 
-
-    // ---------- UI ----------
+  // ---------- UI: Projects ----------
   if (!currentProject) {
     return (
       <div
@@ -553,13 +488,7 @@ function deleteSelectedNode() {
           </span>
         </div>
 
-        <div
-          style={{
-            marginTop: 16,
-            display: "flex",
-            gap: 8,
-          }}
-        >
+        <div style={{ marginTop: 16, display: "flex", gap: 8 }}>
           <input
             value={newProjectTitle}
             onChange={(e) => setNewProjectTitle(e.target.value)}
@@ -638,7 +567,7 @@ function deleteSelectedNode() {
     );
   }
 
-  // ===== Project Canvas (React Flow) =====
+  // ---------- UI: Canvas ----------
   return (
     <div style={{ height: "100dvh", display: "flex", flexDirection: "column" }}>
       {/* Top bar */}
@@ -668,230 +597,211 @@ function deleteSelectedNode() {
           >
             ← Back
           </button>
+
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-  <div style={{ fontWeight: 800 }}>{currentProject.title}</div>
-  {linkMode && (
-    <div style={{ fontSize: 12, color: "rgba(255,255,255,0.65)" }}>
-      Link mode ON
-    </div>
-  )}
-</div>
+            <div style={{ fontWeight: 800 }}>{currentProject.title}</div>
+            {linkMode && (
+              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.65)" }}>
+                Link mode ON
+              </div>
+            )}
+          </div>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-  <button
-    onClick={() => setLinkMode((v) => !v)}
-    style={{
-      padding: "8px 10px",
-      borderRadius: 10,
-      border: "1px solid rgba(255,255,255,0.12)",
-      background: linkMode ? "#6F42FF" : "#151517",
-      color: "#FFFFFF",
-      fontWeight: 800,
-    }}
-  >
-    Link
-  </button>
-<span style={{ opacity: 0.5, fontSize: 12, marginLeft: 8 }}>build: 001</span>
+          <button
+            onClick={() => setLinkMode((v) => !v)}
+            style={{
+              padding: "8px 10px",
+              borderRadius: 10,
+              border: "1px solid rgba(255,255,255,0.12)",
+              background: linkMode ? "#6F42FF" : "#151517",
+              color: "#FFFFFF",
+              fontWeight: 800,
+            }}
+          >
+            Link
+          </button>
 
-  <button
-    onClick={addNode}
-    style={{
-      padding: "8px 10px",
-      borderRadius: 10,
-      border: "1px solid rgba(255,255,255,0.12)",
-      background: "#6F42FF",
-      color: "#FFFFFF",
-      fontWeight: 800,
-    }}
-  >
-    + Node
-  </button>
-</div>
+          <span style={{ opacity: 0.5, fontSize: 12 }}>build: 001</span>
 
+          <button
+            onClick={addNode}
+            style={{
+              padding: "8px 10px",
+              borderRadius: 10,
+              border: "1px solid rgba(255,255,255,0.12)",
+              background: "#6F42FF",
+              color: "#FFFFFF",
+              fontWeight: 800,
+            }}
+          >
+            + Node
+          </button>
+        </div>
       </div>
 
       {/* Canvas */}
       <div
-  style={{
-    flex: 1,
-    background: "#0F0F10",
-    touchAction: "none",
-    position: "relative",
-  }}
->
-
-
+        style={{
+          flex: 1,
+          background: "#0F0F10",
+          touchAction: "none",
+          position: "relative",
+        }}
+      >
         <ReactFlow
-  nodes={nodes}
-  nodeTypes={nodeTypes} 
-  edgeTypes={edgeTypes}
-defaultEdgeOptions={{ type: "nf" }}
-preventScrolling={true}
-
-  edges={edges}
-  onNodesChange={onNodesChange}
-  onEdgesChange={onEdgesChange}
-  onConnect={onConnect}
-  onNodeClick={(_, node) => {
-    setSelectedNodeId(node.id);
-    setSelectedEdgeId(null);
-  }}
-  onEdgeClick={(_, edge) => {
-    if (!linkMode) return;
-    setSelectedEdgeId(edge.id);
-    setSelectedNodeId(null);
-  }}
-  fitView
-  minZoom={0.15}
-maxZoom={2}
-zoomOnPinch={true}
-zoomOnDoubleClick={false}
-
-  panOnDrag={true}
-
-  zoomOnScroll={!linkMode}
-  panOnScroll={!linkMode}
-  nodesConnectable={linkMode}
-  nodesDraggable={!linkMode}
-  connectionRadius={90}
-connectionMode={ConnectionMode.Loose}
-isValidConnection={(c) => c.source !== c.target}
-
-
-  deleteKeyCode={null}
-  multiSelectionKeyCode={null}
-  selectionKeyCode={null}
-  style={{ background: "#0F0F10" }}
-
+          nodes={nodes}
+          edges={edges}
+          nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
+          defaultEdgeOptions={{ type: "nf" }}
+          preventScrolling={true}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onConnect={onConnect}
+          onNodeClick={(_, node) => {
+            setSelectedNodeId(node.id);
+            setSelectedEdgeId(null);
+          }}
+          onEdgeClick={(_, edge) => {
+            if (!linkMode) return;
+            setSelectedEdgeId(edge.id);
+            setSelectedNodeId(null);
+          }}
+          fitView
+          minZoom={0.15}
+          maxZoom={2}
+          zoomOnPinch={true}
+          zoomOnDoubleClick={false}
+          panOnDrag={true}
+          zoomOnScroll={!linkMode}
+          panOnScroll={!linkMode}
+          nodesConnectable={linkMode}
+          nodesDraggable={!linkMode}
+          connectionRadius={90}
+          connectionMode={ConnectionMode.Loose}
+          isValidConnection={(c) => c.source !== c.target}
+          deleteKeyCode={null}
+          multiSelectionKeyCode={null}
+          selectionKeyCode={null}
+          style={{ background: "#0F0F10" }}
         >
           <Background />
-         {/* Controls + Handle */}
-<div
-  style={{
-    position: "absolute",
-    left: 12,
-    bottom: 12, // ✅ на уровне миникарты
-    zIndex: 10,
-    pointerEvents: "auto",
-  }}
->
-  {/* ручка (всегда сверху, отдельно от тулбара) */}
-  <button
-    onClick={() => setShowControls((v) => !v)}
-    style={{
-      position: "absolute",
-      left: 0,
-      bottom: 58, // по центру тулбара визуально
-      width: 14,
-      height: 34,
-      borderRadius: 10,
-      border: "1px solid rgba(183,183,183,0.18)",
-      background: "rgba(23,23,23,0.92)",
-      color: "rgba(255,255,255,0.75)",
-      fontWeight: 900,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      zIndex: 9999,
-    }}
-    aria-label="Toggle controls"
-  >
-    {showControls ? "❮" : "❯"}
-  </button>
 
-  {showControls && (
-    <div
-      style={{
-        marginLeft: 22, // ✅ тулбар всегда правее ручки
-        borderRadius: 14,
-        overflow: "hidden",
-        border: "none",
-        background: "transparent",
-      }}
-    >
-      <Controls />
-    </div>
-  )}
-</div>
+          {/* Controls + Handle */}
+          <div
+            style={{
+              position: "absolute",
+              left: 12,
+              bottom: 12,
+              zIndex: 10,
+              pointerEvents: "auto",
+            }}
+          >
+            <button
+              onClick={() => setShowControls((v) => !v)}
+              style={{
+                position: "absolute",
+                left: 0,
+                bottom: 58,
+                width: 14,
+                height: 34,
+                borderRadius: 10,
+                border: "1px solid rgba(183,183,183,0.18)",
+                background: "rgba(23,23,23,0.92)",
+                color: "rgba(255,255,255,0.75)",
+                fontWeight: 900,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                zIndex: 9999,
+              }}
+              aria-label="Toggle controls"
+            >
+              {showControls ? "❮" : "❯"}
+            </button>
 
+            {showControls && (
+              <div
+                style={{
+                  marginLeft: 22,
+                  borderRadius: 14,
+                  overflow: "hidden",
+                  border: "none",
+                  background: "transparent",
+                }}
+              >
+                <Controls />
+              </div>
+            )}
+          </div>
 
-{/* MiniMap + Toggle */}
-<div
-  style={{
-    position: "absolute",
-    right: 12,
-    bottom: 12,
-    zIndex: 10,
-    pointerEvents: "auto",
-  }}
->
-  {/* Кнопка всегда видима */}
-  <button
-  onClick={() => setShowMiniMap((v) => !v)}
-  style={{
-    position: "absolute",
-    right: 8,
-    bottom: showMiniMap ? 74 : 8,
-    width: 28,
-    height: 28,
-    borderRadius: 10,
-    border: "1px solid rgba(183,183,183,0.18)",
-    background: "rgba(23,23,23,0.92)",
-    color: "#FFFFFF",
-    fontWeight: 900,
-    lineHeight: "26px",
-    zIndex: 9999,
-  }}
-  aria-label="Toggle minimap"
->
-  {showMiniMap ? "_" : "▢"}
-</button>
+          {/* MiniMap + Toggle */}
+          <div
+            style={{
+              position: "absolute",
+              right: 12,
+              bottom: 12,
+              zIndex: 10,
+              pointerEvents: "auto",
+            }}
+          >
+            <button
+              onClick={() => setShowMiniMap((v) => !v)}
+              style={{
+                position: "absolute",
+                right: 8,
+                bottom: showMiniMap ? 74 : 8,
+                width: 28,
+                height: 28,
+                borderRadius: 10,
+                border: "1px solid rgba(183,183,183,0.18)",
+                background: "rgba(23,23,23,0.92)",
+                color: "#FFFFFF",
+                fontWeight: 900,
+                lineHeight: "26px",
+                zIndex: 9999,
+              }}
+              aria-label="Toggle minimap"
+            >
+              {showMiniMap ? "_" : "▢"}
+            </button>
 
-
-  {/* Контейнер миникарты (когда скрыта — остаётся маленькая плашка-держатель) */}
-  <div
-    style={{
-      width: showMiniMap ? 150 : 54,
-      padding: showMiniMap ? 1 : 0,
-      backgroundClip: "padding-box",
-
-      boxSizing: "border-box",
-
-      height: showMiniMap ? 110 : 44,
-      borderRadius: 14,
-      overflow: "hidden",
-      border: "1px solid rgba(183,183,183,0.18)",
-      background: "rgba(23,23,23,0.92)",
-      boxShadow: "0 10px 30px rgba(0,0,0,0.35)",
-      position: "relative",
-      transition: "width 120ms ease, height 120ms ease",
-    }}
-  >
-    {showMiniMap && (
-      <MiniMap
-        style={{
-  width: "100%",
-  height: "100%",
-
-
-  display: "block",
-  backgroundColor: "rgba(23,23,23,0.92)",
-}}
- 
-        maskColor="rgba(0,0,0,0.15)"
-
-        nnodeColor={() => "#00C2FF"}
-
-        nodeStrokeColor={() => "#6F42FF"}
-
-        nodeStrokeWidth={2}
-      />
-    )}
-  </div>
-</div>
-
-
+            <div
+              style={{
+                width: showMiniMap ? 150 : 54,
+                padding: showMiniMap ? 1 : 0,
+                backgroundClip: "padding-box",
+                boxSizing: "border-box",
+                height: showMiniMap ? 110 : 44,
+                borderRadius: 14,
+                overflow: "hidden",
+                border: "1px solid rgba(183,183,183,0.18)",
+                background: "rgba(23,23,23,0.92)",
+                boxShadow: "0 10px 30px rgba(0,0,0,0.35)",
+                position: "relative",
+                transition: "width 120ms ease, height 120ms ease",
+              }}
+            >
+              {showMiniMap && (
+                <MiniMap
+                  pannable={true}
+                  zoomable={true}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    display: "block",
+                    backgroundColor: "rgba(23,23,23,0.92)",
+                  }}
+                  maskColor="rgba(0,0,0,0.15)"
+                  nodeColor={() => "#00C2FF"}
+                  nodeStrokeColor={() => "#6F42FF"}
+                  nodeStrokeWidth={2}
+                />
+              )}
+            </div>
+          </div>
         </ReactFlow>
       </div>
 
@@ -906,32 +816,32 @@ isValidConnection={(c) => c.source !== c.target}
         }}
       >
         {!selectedNode ? (
-  selectedEdgeId && linkMode ? (
-    <div style={{ display: "grid", gap: 10 }}>
-      <div style={{ opacity: 0.65 }}>Link selected.</div>
+          selectedEdgeId && linkMode ? (
+            <div style={{ display: "grid", gap: 10 }}>
+              <div style={{ opacity: 0.65 }}>Link selected.</div>
 
-      <button
-        onClick={deleteSelectedEdge}
-        style={{
-          padding: "10px 8px",
-          borderRadius: 10,
-          border: "1px solid rgba(255,255,255,0.12)",
-          background: "#151517",
-          color: "#FFFFFF",
-          fontWeight: 800,
-        }}
-      >
-        Delete link
-      </button>
+              <button
+                onClick={deleteSelectedEdge}
+                style={{
+                  padding: "10px 8px",
+                  borderRadius: 10,
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  background: "#151517",
+                  color: "#FFFFFF",
+                  fontWeight: 800,
+                }}
+              >
+                Delete link
+              </button>
 
-      <div style={{ opacity: 0.6, fontSize: 12 }}>
-        Tip: tap another link to switch, or turn off Link mode.
-      </div>
-    </div>
-  ) : (
-    <div style={{ opacity: 0.65 }}>Tap a node to edit.</div>
-  )
-) : (
+              <div style={{ opacity: 0.6, fontSize: 12 }}>
+                Tip: tap another link to switch, or turn off Link mode.
+              </div>
+            </div>
+          ) : (
+            <div style={{ opacity: 0.65 }}>Tap a node to edit.</div>
+          )
+        ) : (
           <div style={{ display: "grid", gap: 8 }}>
             <div style={{ fontWeight: 800 }}>Node</div>
 
@@ -959,8 +869,7 @@ isValidConnection={(c) => c.source !== c.target}
                     padding: "10px 8px",
                     borderRadius: 10,
                     border: "1px solid rgba(255,255,255,0.12)",
-                    background:
-                      selectedNode.data?.status === s ? "#232326" : "#151517",
+                    background: selectedNode.data?.status === s ? "#232326" : "#151517",
                     color: "#FFFFFF",
                     fontWeight: 800,
                   }}
@@ -988,6 +897,7 @@ isValidConnection={(c) => c.source !== c.target}
     </div>
   );
 }
+
 export default function AppWithBoundary() {
   return (
     <ErrorBoundary>
