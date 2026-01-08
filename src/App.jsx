@@ -262,6 +262,34 @@ function App() {
     }
   }, [pKey]);
 
+// === NF-HOTKEYS-START ===
+useEffect(() => {
+  const handler = (e) => {
+    const isMac = /Mac|iPhone|iPad/.test(navigator.platform);
+    const mod = isMac ? e.metaKey : e.ctrlKey;
+    if (!mod) return;
+
+    const key = e.key.toLowerCase();
+
+    // Undo: Ctrl/Cmd + Z
+    if (key === "z" && !e.shiftKey) {
+      e.preventDefault();
+      undo();
+    }
+
+    // Redo: Ctrl/Cmd + Shift + Z
+    if (key === "z" && e.shiftKey) {
+      e.preventDefault();
+      redo();
+    }
+  };
+
+  window.addEventListener("keydown", handler, { passive: false });
+  return () => window.removeEventListener("keydown", handler);
+}, [undo, redo]);
+// === NF-HOTKEYS-END ===
+
+  
   useEffect(() => {
     try {
       localStorage.setItem(pKey, JSON.stringify(projects));
@@ -293,6 +321,80 @@ function App() {
 
   const [nodes, setNodes] = useState([]);
   const [edges, setEdges] = useState([]);
+  // === NF-UNDOREDO-ENGINE-START ===
+const historyRef = useRef({
+  past: [],
+  future: [],
+  lastSig: "",
+});
+
+const MAX_HISTORY = 60;
+
+const deepCopy = (v) => JSON.parse(JSON.stringify(v));
+
+// Сигнатура, чтобы не пушить одинаковые состояния
+const makeSig = (n, e) => {
+  const nIds = (n || []).map((x) => x.id).join(",");
+  const eIds = (e || []).map((x) => x.id).join(",");
+  return `${(n || []).length}:${(e || []).length}:${nIds}|${eIds}`;
+};
+
+const pushHistory = useCallback(
+  (nextNodes, nextEdges) => {
+    const h = historyRef.current;
+    const sig = makeSig(nextNodes, nextEdges);
+
+    if (sig === h.lastSig) return;
+
+    h.past.push({
+      nodes: deepCopy(nodes),
+      edges: deepCopy(edges),
+    });
+
+    if (h.past.length > MAX_HISTORY) h.past.shift();
+
+    h.future = [];
+    h.lastSig = sig;
+  },
+  [nodes, edges]
+);
+
+const canUndo = historyRef.current.past.length > 0;
+const canRedo = historyRef.current.future.length > 0;
+
+const undo = useCallback(() => {
+  const h = historyRef.current;
+  if (!h.past.length) return;
+
+  const prev = h.past.pop();
+
+  h.future.push({
+    nodes: deepCopy(nodes),
+    edges: deepCopy(edges),
+  });
+
+  setNodes(prev.nodes);
+  setEdges(prev.edges);
+  h.lastSig = makeSig(prev.nodes, prev.edges);
+}, [nodes, edges]);
+
+const redo = useCallback(() => {
+  const h = historyRef.current;
+  if (!h.future.length) return;
+
+  const next = h.future.pop();
+
+  h.past.push({
+    nodes: deepCopy(nodes),
+    edges: deepCopy(edges),
+  });
+
+  setNodes(next.nodes);
+  setEdges(next.edges);
+  h.lastSig = makeSig(next.nodes, next.edges);
+}, [nodes, edges]);
+// === NF-UNDOREDO-ENGINE-END ===
+
   const [selectedNodeId, setSelectedNodeId] = useState(null);
   const [selectedEdgeId, setSelectedEdgeId] = useState(null);
 
@@ -309,7 +411,10 @@ function App() {
     }),
     [linkMode]
   );
+
   const edgeTypes = useMemo(() => ({ nf: NodeflowEdge }), []);
+
+  
 
   // reset "fit done" when switching projects
   useEffect(() => {
@@ -377,35 +482,55 @@ function App() {
     } catch {}
   }, [gKey, nodes, edges]);
 
-  const onNodesChange = useCallback(
-    (changes) => setNodes((nds) => applyNodeChanges(changes, nds)),
-    []
-  );
-  const onEdgesChange = useCallback(
-    (changes) => setEdges((eds) => applyEdgeChanges(changes, eds)),
-    []
-  );
+  // === NF-ONNODESCHANGE-START ===
+const onNodesChange = useCallback(
+  (changes) => {
+    const meaningful = changes.some(
+      (c) =>
+        c.type === "position" ||
+        c.type === "dimensions" ||
+        c.type === "remove" ||
+        c.type === "add"
+    );
 
-  const onConnect = useCallback(
-    (connection) => {
-      if (!linkMode) return;
-      if (connection.source === connection.target) return;
+    setNodes((nds) => {
+      const next = applyNodeChanges(changes, nds);
+      if (meaningful) pushHistory(next, edges);
+      return next;
+    });
+  },
+  [pushHistory, edges]
+);
+// === NF-ONNODESCHANGE-END ===
 
-      const sourceHandle = connection.sourceHandle || "s-right";
-      const targetHandle =
-        !connection.targetHandle || connection.targetHandle === "target-all"
-          ? nearestTargetHandle({ sourceHandle })
-          : connection.targetHandle;
+  // === NF-ONEDGESCHANGE-START ===
+const onEdgesChange = useCallback(
+  (changes) => {
+    const meaningful = changes.some((c) => c.type === "remove" || c.type === "add");
 
-      setEdges((eds) =>
-        addEdge(
-          { ...connection, id: crypto.randomUUID(), type: "nf", sourceHandle, targetHandle },
-          eds
-        )
-      );
-    },
-    [linkMode]
-  );
+    setEdges((eds) => {
+      const next = applyEdgeChanges(changes, eds);
+      if (meaningful) pushHistory(nodes, next);
+      return next;
+    });
+  },
+  [pushHistory, nodes]
+);
+// === NF-ONEDGESCHANGE-END ===
+
+// === NF-ONCONNECT-START ===
+const onConnect = useCallback(
+  (params) => {
+    setEdges((eds) => {
+      const next = addEdge(params, eds);
+      pushHistory(nodes, next);
+      return next;
+    });
+  },
+  [pushHistory, nodes]
+);
+// === NF-ONCONNECT-END ===
+
 
   function addNode() {
     const id = crypto.randomUUID();
@@ -541,7 +666,7 @@ function App() {
 
   // ---------- UI: Canvas ----------
   return (
-    <div style={{ height: "100dvh", display: "flex", flexDirection: "column" }}>
+    <div style={{ height: "100dvh", display: "flex", flexDirection: "column", position: "relative" }}>
       {/* Top bar */}
       <div
         style={{
@@ -621,6 +746,50 @@ function App() {
             stroke-width: 2px !important;
           }
         `}</style>
+
+{/* === NF-HISTORY-UI-START === */}
+<div
+  style={{
+    position: "absolute",
+    top: 12,
+    left: 12,
+    zIndex: 50,
+    display: "flex",
+    gap: 8,
+  }}
+>
+  <button
+    onClick={undo}
+    disabled={!canUndo}
+    style={{
+      padding: "8px 10px",
+      borderRadius: 10,
+      border: "1px solid rgba(255,255,255,0.12)",
+      background: "rgba(0,0,0,0.35)",
+      color: "white",
+      opacity: canUndo ? 1 : 0.5,
+    }}
+  >
+    Undo
+  </button>
+
+  <button
+    onClick={redo}
+    disabled={!canRedo}
+    style={{
+      padding: "8px 10px",
+      borderRadius: 10,
+      border: "1px solid rgba(255,255,255,0.12)",
+      background: "rgba(0,0,0,0.35)",
+      color: "white",
+      opacity: canRedo ? 1 : 0.5,
+    }}
+  >
+    Redo
+  </button>
+</div>
+{/* === NF-HISTORY-UI-END === */}
+
 
         <ReactFlow
           nodes={nodes}
