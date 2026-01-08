@@ -648,10 +648,37 @@ function App() {
   const deepCopy = (v) => JSON.parse(JSON.stringify(v));
 
   const makeSig = (n, e) => {
-    const nIds = (n || []).map((x) => x.id).join(",");
-    const eIds = (e || []).map((x) => x.id).join(",");
-    return `${(n || []).length}:${(e || []).length}:${nIds}|${eIds}`;
-  };
+  const ns = (n || [])
+    .slice()
+    .sort((a, b) => String(a.id).localeCompare(String(b.id)))
+    .map((x) => {
+      const px = Math.round(((x.position?.x ?? 0) * 10)) / 10;
+      const py = Math.round(((x.position?.y ?? 0) * 10)) / 10;
+
+      const d = x.data || {};
+      const title = String(d.title ?? "");
+      const status = String(d.status ?? "");
+      const notes = String(d.notes ?? "");
+      const notesKey = `${notes.length}:${notes.slice(0, 60)}`;
+
+      const img = Array.isArray(d.imageIds) ? d.imageIds.join(",") : "";
+
+      return `${x.id}@${px},${py}|${title}|${status}|${notesKey}|${img}`;
+    })
+    .join("~");
+
+  const es = (e || [])
+    .slice()
+    .sort((a, b) => String(a.id).localeCompare(String(b.id)))
+    .map(
+      (x) =>
+        `${x.id}:${x.source}:${x.target}:${x.sourceHandle || ""}:${x.targetHandle || ""}`
+    )
+    .join("~");
+
+  return `${ns}||${es}`;
+};
+
 
   const pushHistory = useCallback(
     (nextNodes, nextEdges) => {
@@ -1230,7 +1257,7 @@ function App() {
             Link
           </button>
 
-          <span style={{ opacity: 0.5, fontSize: 12 }}>build: 001</span>
+          
 
           <button
             onClick={addNode}
@@ -1432,20 +1459,21 @@ function App() {
   onClick={() => setIsDetailsCollapsed((v) => !v)}
   style={{
     position: "absolute",
-    top: 8,
-    right: 8,
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    border: "1px solid rgba(255,255,255,0.12)",
-    background: "rgba(21,21,23,0.9)",
+    top: -14,
+    left: "50%",
+    transform: "translateX(-50%)",
+    height: 28,
+    width: 56,
+    borderRadius: 12,
+    border: "1px solid rgba(255,255,255,0.14)",
+    background: "rgba(21,21,23,0.92)",
     color: "rgba(255,255,255,0.85)",
     fontWeight: 900,
     cursor: "pointer",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    zIndex: 20,
+    zIndex: 30,
   }}
   aria-label={isDetailsCollapsed ? "Expand panel" : "Collapse panel"}
   title={isDetailsCollapsed ? "Expand" : "Collapse"}
@@ -1453,6 +1481,7 @@ function App() {
   {isDetailsCollapsed ? "▴" : "▾"}
 </button>
 {/* === NF-DETAILS-TOGGLE-END === */}
+
 
 
         {isDetailsCollapsed ? null : !selectedNode ? (
