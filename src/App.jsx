@@ -154,34 +154,76 @@ function NodeCard({ data, selected, linkMode }) {
       />
 
       {/* 4 target handles */}
-      <Handle type="target" position={Position.Left} id="t-left" style={{ ...baseHandle, left: -17 }}>
+      <Handle
+        type="target"
+        position={Position.Left}
+        id="t-left"
+        style={{ ...baseHandle, left: -17 }}
+      >
         <div style={dotStyle} />
       </Handle>
-      <Handle type="target" position={Position.Right} id="t-right" style={{ ...baseHandle, right: -17 }}>
+      <Handle
+        type="target"
+        position={Position.Right}
+        id="t-right"
+        style={{ ...baseHandle, right: -17 }}
+      >
         <div style={dotStyle} />
       </Handle>
-      <Handle type="target" position={Position.Top} id="t-top" style={{ ...baseHandle, top: -17 }}>
+      <Handle
+        type="target"
+        position={Position.Top}
+        id="t-top"
+        style={{ ...baseHandle, top: -17 }}
+      >
         <div style={dotStyle} />
       </Handle>
-      <Handle type="target" position={Position.Bottom} id="t-bottom" style={{ ...baseHandle, bottom: -17 }}>
+      <Handle
+        type="target"
+        position={Position.Bottom}
+        id="t-bottom"
+        style={{ ...baseHandle, bottom: -17 }}
+      >
         <div style={dotStyle} />
       </Handle>
 
       {/* 4 source handles */}
-      <Handle type="source" position={Position.Left} id="s-left" style={{ ...baseHandle, left: -17 }}>
+      <Handle
+        type="source"
+        position={Position.Left}
+        id="s-left"
+        style={{ ...baseHandle, left: -17 }}
+      >
         <div style={dotStyle} />
       </Handle>
-      <Handle type="source" position={Position.Right} id="s-right" style={{ ...baseHandle, right: -17 }}>
+      <Handle
+        type="source"
+        position={Position.Right}
+        id="s-right"
+        style={{ ...baseHandle, right: -17 }}
+      >
         <div style={dotStyle} />
       </Handle>
-      <Handle type="source" position={Position.Top} id="s-top" style={{ ...baseHandle, top: -17 }}>
+      <Handle
+        type="source"
+        position={Position.Top}
+        id="s-top"
+        style={{ ...baseHandle, top: -17 }}
+      >
         <div style={dotStyle} />
       </Handle>
-      <Handle type="source" position={Position.Bottom} id="s-bottom" style={{ ...baseHandle, bottom: -17 }}>
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        id="s-bottom"
+        style={{ ...baseHandle, bottom: -17 }}
+      >
         <div style={dotStyle} />
       </Handle>
 
-      <div style={{ fontWeight: 800, color: titleColor, fontSize: 14 }}>{title}</div>
+      <div style={{ fontWeight: 800, color: titleColor, fontSize: 14 }}>
+        {title}
+      </div>
 
       <div style={{ marginTop: 8, display: "flex", gap: 8, alignItems: "center" }}>
         <div
@@ -199,7 +241,9 @@ function NodeCard({ data, selected, linkMode }) {
         </div>
 
         {selected && (
-          <div style={{ color: "#6F42FF", fontSize: 12, fontWeight: 800 }}>selected</div>
+          <div style={{ color: "#6F42FF", fontSize: 12, fontWeight: 800 }}>
+            selected
+          </div>
         )}
       </div>
     </div>
@@ -221,9 +265,19 @@ class ErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{ padding: 16, fontFamily: "Arial", background: "#0F0F10", color: "#fff", minHeight: "100dvh" }}>
+        <div
+          style={{
+            padding: 16,
+            fontFamily: "Arial",
+            background: "#0F0F10",
+            color: "#fff",
+            minHeight: "100dvh",
+          }}
+        >
           <h2 style={{ marginTop: 0 }}>Nodeflow crashed</h2>
-          <div style={{ opacity: 0.8, whiteSpace: "pre-wrap" }}>{this.state.message}</div>
+          <div style={{ opacity: 0.8, whiteSpace: "pre-wrap" }}>
+            {this.state.message}
+          </div>
         </div>
       );
     }
@@ -239,6 +293,220 @@ function nearestTargetHandle({ sourceHandle }) {
   if (sourceHandle === "s-bottom") return "t-top";
   return "t-left";
 }
+
+// === NF-IDB-IMAGES-START ===
+const NF_DB_NAME = "nodeflow_db";
+const NF_DB_VERSION = 1;
+const NF_IMAGES_STORE = "images";
+
+function nfOpenDb() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(NF_DB_NAME, NF_DB_VERSION);
+
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(NF_IMAGES_STORE)) {
+        const store = db.createObjectStore(NF_IMAGES_STORE, { keyPath: "id" });
+        store.createIndex("createdAt", "createdAt", { unique: false });
+      }
+    };
+
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function nfPutImage(blob) {
+  const db = await nfOpenDb();
+  const id = crypto.randomUUID();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(NF_IMAGES_STORE, "readwrite");
+    tx.oncomplete = () => {
+      db.close();
+      resolve(id);
+    };
+    tx.onerror = () => {
+      const err = tx.error || new Error("IndexedDB tx failed");
+      db.close();
+      reject(err);
+    };
+    tx.objectStore(NF_IMAGES_STORE).put({ id, blob, createdAt: Date.now() });
+  });
+}
+
+async function nfGetImageBlob(id) {
+  const db = await nfOpenDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(NF_IMAGES_STORE, "readonly");
+    const req = tx.objectStore(NF_IMAGES_STORE).get(id);
+
+    req.onsuccess = () => {
+      const row = req.result;
+      db.close();
+      resolve(row?.blob || null);
+    };
+    req.onerror = () => {
+      const err = req.error || new Error("IndexedDB get failed");
+      db.close();
+      reject(err);
+    };
+  });
+}
+
+async function nfDeleteImage(id) {
+  const db = await nfOpenDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(NF_IMAGES_STORE, "readwrite");
+    const req = tx.objectStore(NF_IMAGES_STORE).delete(id);
+    req.onsuccess = () => {
+      db.close();
+      resolve(true);
+    };
+    req.onerror = () => {
+      const err = req.error || new Error("IndexedDB delete failed");
+      db.close();
+      reject(err);
+    };
+  });
+}
+
+async function nfDownscaleImage(file, maxSide = 1600, quality = 0.82) {
+  try {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    await new Promise((res, rej) => {
+      img.onload = res;
+      img.onerror = rej;
+      img.src = url;
+    });
+
+    const w = img.naturalWidth || img.width;
+    const h = img.naturalHeight || img.height;
+
+    const scale = Math.min(1, maxSide / Math.max(w, h));
+    const cw = Math.max(1, Math.round(w * scale));
+    const ch = Math.max(1, Math.round(h * scale));
+
+    const canvas = document.createElement("canvas");
+    canvas.width = cw;
+    canvas.height = ch;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(img, 0, 0, cw, ch);
+
+    const blob = await new Promise((resolve) => {
+      canvas.toBlob((b) => resolve(b || file), "image/jpeg", quality);
+    });
+
+    URL.revokeObjectURL(url);
+    return blob;
+  } catch {
+    return file;
+  }
+}
+// === NF-IDB-IMAGES-END ===
+
+// === NF-NODE-IMAGE-THUMB-START ===
+function NodeImageThumb({ imageId, getUrl, onOpen, onDelete }) {
+  const [url, setUrl] = React.useState(null);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const u = await getUrl(imageId);
+        if (!alive) return;
+        setUrl(u);
+      } catch {
+        if (!alive) return;
+        setUrl(null);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [imageId, getUrl]);
+
+  return (
+    <div
+      style={{
+        position: "relative",
+        borderRadius: 12,
+        overflow: "hidden",
+        border: "1px solid rgba(255,255,255,0.12)",
+        background: "rgba(255,255,255,0.06)",
+        aspectRatio: "1 / 1",
+      }}
+    >
+      <button
+        onClick={onDelete}
+        style={{
+          position: "absolute",
+          top: 6,
+          right: 6,
+          zIndex: 2,
+          width: 28,
+          height: 28,
+          borderRadius: 999,
+          border: "1px solid rgba(255,255,255,0.18)",
+          background: "rgba(0,0,0,0.55)",
+          color: "#fff",
+          fontWeight: 900,
+          cursor: "pointer",
+        }}
+        aria-label="Delete image"
+      >
+        ✕
+      </button>
+
+      <button
+        onClick={async () => {
+          if (url) onOpen(url);
+          else {
+            const u = await getUrl(imageId);
+            if (u) onOpen(u);
+          }
+        }}
+        style={{
+          position: "absolute",
+          inset: 0,
+          border: "none",
+          background: "transparent",
+          padding: 0,
+          cursor: "pointer",
+        }}
+        aria-label="Open image"
+      >
+        {url ? (
+          <img
+            src={url}
+            alt="thumb"
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              display: "block",
+            }}
+          />
+        ) : (
+          <div
+            style={{
+              width: "100%",
+              height: "100%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              opacity: 0.7,
+              fontSize: 12,
+            }}
+          >
+            Loading…
+          </div>
+        )}
+      </button>
+    </div>
+  );
+}
+// === NF-NODE-IMAGE-THUMB-END ===
 
 // ---------- App ----------
 function App() {
@@ -298,7 +566,6 @@ function App() {
   const [isSaving, setIsSaving] = useState(false);
   const saveTimerRef = useRef(null);
 
-  // держим "последние" nodes/edges, чтобы сохранять из таймера без проблем с замыканиями
   const nodesRef = useRef(nodes);
   const edgesRef = useRef(edges);
 
@@ -323,10 +590,12 @@ function App() {
 
     setIsSaving(true);
     try {
-      localStorage.setItem(gKey, JSON.stringify({ nodes: nodesRef.current, edges: edgesRef.current }));
+      localStorage.setItem(
+        gKey,
+        JSON.stringify({ nodes: nodesRef.current, edges: edgesRef.current })
+      );
       setIsDirty(false);
     } catch {
-      // если не сохранилось — оставляем dirty
       setIsDirty(true);
     } finally {
       setIsSaving(false);
@@ -342,7 +611,10 @@ function App() {
     clearSaveTimer();
     saveTimerRef.current = setTimeout(() => {
       try {
-        localStorage.setItem(gKey, JSON.stringify({ nodes: nodesRef.current, edges: edgesRef.current }));
+        localStorage.setItem(
+          gKey,
+          JSON.stringify({ nodes: nodesRef.current, edges: edgesRef.current })
+        );
         setIsDirty(false);
       } catch {
         setIsDirty(true);
@@ -353,27 +625,23 @@ function App() {
     }, 700);
   }, [gKey, clearSaveTimer]);
 
-  // flush при смене проекта / размонтировании
   useEffect(() => {
     return () => {
-      // если уходили, и было несохранённое — пробуем сохранить сразу
       if (gKey && (isDirty || isSaving)) {
         try {
-          localStorage.setItem(gKey, JSON.stringify({ nodes: nodesRef.current, edges: edgesRef.current }));
+          localStorage.setItem(
+            gKey,
+            JSON.stringify({ nodes: nodesRef.current, edges: edgesRef.current })
+          );
         } catch {}
       }
       clearSaveTimer();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gKey]); // намеренно только gKey
+  }, [gKey]);
 
   // === Undo/Redo engine ===
-  const historyRef = useRef({
-    past: [],
-    future: [],
-    lastSig: "",
-  });
-
+  const historyRef = useRef({ past: [], future: [], lastSig: "" });
   const [historyTick, setHistoryTick] = useState(0);
 
   const MAX_HISTORY = 60;
@@ -389,14 +657,9 @@ function App() {
     (nextNodes, nextEdges) => {
       const h = historyRef.current;
       const sig = makeSig(nextNodes, nextEdges);
-
       if (sig === h.lastSig) return;
 
-      h.past.push({
-        nodes: deepCopy(nodes),
-        edges: deepCopy(edges),
-      });
-
+      h.past.push({ nodes: deepCopy(nodes), edges: deepCopy(edges) });
       if (h.past.length > MAX_HISTORY) h.past.shift();
 
       h.future = [];
@@ -411,18 +674,12 @@ function App() {
     if (!h.past.length) return;
 
     const prev = h.past.pop();
-
-    h.future.push({
-      nodes: deepCopy(nodes),
-      edges: deepCopy(edges),
-    });
+    h.future.push({ nodes: deepCopy(nodes), edges: deepCopy(edges) });
 
     setNodes(prev.nodes);
     setEdges(prev.edges);
     h.lastSig = makeSig(prev.nodes, prev.edges);
     setHistoryTick((t) => t + 1);
-
-    // изменение — значит нужно сохранить (debounced)
     scheduleSave();
   }, [nodes, edges, scheduleSave]);
 
@@ -431,17 +688,12 @@ function App() {
     if (!h.future.length) return;
 
     const next = h.future.pop();
-
-    h.past.push({
-      nodes: deepCopy(nodes),
-      edges: deepCopy(edges),
-    });
+    h.past.push({ nodes: deepCopy(nodes), edges: deepCopy(edges) });
 
     setNodes(next.nodes);
     setEdges(next.edges);
     h.lastSig = makeSig(next.nodes, next.edges);
     setHistoryTick((t) => t + 1);
-
     scheduleSave();
   }, [nodes, edges, scheduleSave]);
 
@@ -458,6 +710,40 @@ function App() {
   const rfRef = useRef(null);
   const didFitRef = useRef(false);
 
+  // === Node details (notes + images) state ===
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const imageUrlCacheRef = useRef(new Map());
+  const fileInputRef = useRef(null);
+
+  const getImageObjectUrl = useCallback(async (imageId) => {
+    const cache = imageUrlCacheRef.current;
+    if (cache.has(imageId)) return cache.get(imageId);
+
+    const blob = await nfGetImageBlob(imageId);
+    if (!blob) return null;
+
+    const url = URL.createObjectURL(blob);
+    cache.set(imageId, url);
+    return url;
+  }, []);
+
+  const revokeImageUrl = useCallback((imageId) => {
+    const cache = imageUrlCacheRef.current;
+    const url = cache.get(imageId);
+    if (url) {
+      URL.revokeObjectURL(url);
+      cache.delete(imageId);
+    }
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      const cache = imageUrlCacheRef.current;
+      for (const url of cache.values()) URL.revokeObjectURL(url);
+      cache.clear();
+    };
+  }, [gKey]);
+
   const nodeTypes = useMemo(
     () => ({
       card: (props) => <NodeCard {...props} linkMode={linkMode} />,
@@ -467,16 +753,16 @@ function App() {
 
   const edgeTypes = useMemo(() => ({ nf: NodeflowEdge }), []);
 
-  // reset "fit done" + reset history + reset save states on project switch
+  // reset on project switch
   useEffect(() => {
     didFitRef.current = false;
-
     historyRef.current = { past: [], future: [], lastSig: "" };
     setHistoryTick((t) => t + 1);
 
     clearSaveTimer();
     setIsDirty(false);
     setIsSaving(false);
+    setPreviewUrl(null);
   }, [gKey, clearSaveTimer]);
 
   // load graph
@@ -501,7 +787,12 @@ function App() {
         return {
           ...n,
           position: { x: Number.isFinite(x) ? x : 40, y: Number.isFinite(y) ? y : 40 },
-          data: { title: n?.data?.title || "New step", status: n?.data?.status || "idea" },
+          data: {
+            title: n?.data?.title || "New step",
+            status: n?.data?.status || "idea",
+            notes: typeof n?.data?.notes === "string" ? n.data.notes : "",
+            imageIds: Array.isArray(n?.data?.imageIds) ? n.data.imageIds : [],
+          },
           type: n?.type || "card",
         };
       });
@@ -525,7 +816,7 @@ function App() {
     setSelectedEdgeId(null);
   }, [gKey]);
 
-  // do fitView only when we have BOTH instance and nodes
+  // fitView once
   useEffect(() => {
     if (!gKey) return;
     if (didFitRef.current) return;
@@ -537,7 +828,7 @@ function App() {
     });
   }, [gKey, nodes.length]);
 
-  // === Hotkeys (после undo/redo) ===
+  // hotkeys
   useEffect(() => {
     const handler = (e) => {
       const isMac = /Mac|iPhone|iPad/.test(navigator.platform);
@@ -550,7 +841,6 @@ function App() {
         e.preventDefault();
         undo();
       }
-
       if (key === "z" && e.shiftKey) {
         e.preventDefault();
         redo();
@@ -561,15 +851,11 @@ function App() {
     return () => window.removeEventListener("keydown", handler);
   }, [undo, redo]);
 
-  // === ReactFlow handlers (и тут же триггерим autosave) ===
+  // handlers
   const onNodesChange = useCallback(
     (changes) => {
       const meaningful = changes.some(
-        (c) =>
-          c.type === "position" ||
-          c.type === "dimensions" ||
-          c.type === "remove" ||
-          c.type === "add"
+        (c) => c.type === "position" || c.type === "dimensions" || c.type === "remove" || c.type === "add"
       );
 
       setNodes((nds) => {
@@ -605,7 +891,6 @@ function App() {
         pushHistory(nodes, next);
         return next;
       });
-
       scheduleSave();
     },
     [pushHistory, nodes, scheduleSave]
@@ -618,12 +903,11 @@ function App() {
     const newNode = {
       id,
       position: { x: 40, y: 40 },
-      data: { title: "New step", status: "idea" },
+      data: { title: "New step", status: "idea", notes: "", imageIds: [] },
       type: "card",
     };
     setNodes((prev) => [newNode, ...prev]);
     setSelectedNodeId(id);
-
     didFitRef.current = false;
     scheduleSave();
   }
@@ -635,31 +919,117 @@ function App() {
 
   function updateSelectedNode(patch) {
     if (!selectedNodeId) return;
-
     pushHistory(nodes, edges);
 
     setNodes((prev) =>
       prev.map((n) => (n.id !== selectedNodeId ? n : { ...n, data: { ...n.data, ...patch } }))
     );
+
     didFitRef.current = false;
     scheduleSave();
+  }
+
+  function updateSelectedNodeNotes(nextNotes) {
+    if (!selectedNodeId) return;
+    pushHistory(nodes, edges);
+
+    setNodes((prev) =>
+      prev.map((n) =>
+        n.id !== selectedNodeId
+          ? n
+          : { ...n, data: { ...n.data, notes: String(nextNotes ?? "") } }
+      )
+    );
+
+    scheduleSave();
+  }
+
+  async function addImagesToSelectedNode(files) {
+    if (!selectedNodeId) return;
+    if (!files || files.length === 0) return;
+
+    const MAX_IMAGES_PER_NODE = 10;
+
+    const current = nodes.find((n) => n.id === selectedNodeId);
+    const existing = Array.isArray(current?.data?.imageIds) ? current.data.imageIds : [];
+    if (existing.length >= MAX_IMAGES_PER_NODE) return;
+
+    pushHistory(nodes, edges);
+
+    const toAdd = Array.from(files).slice(0, Math.max(0, MAX_IMAGES_PER_NODE - existing.length));
+
+    try {
+      const newIds = [];
+      for (const f of toAdd) {
+        const downscaled = await nfDownscaleImage(f, 1600, 0.82);
+        const id = await nfPutImage(downscaled);
+        newIds.push(id);
+      }
+
+      setNodes((prev) =>
+        prev.map((n) => {
+          if (n.id !== selectedNodeId) return n;
+          const prevIds = Array.isArray(n?.data?.imageIds) ? n.data.imageIds : [];
+          return { ...n, data: { ...n.data, imageIds: [...prevIds, ...newIds] } };
+        })
+      );
+
+      scheduleSave();
+    } catch (e) {
+      console.log("addImagesToSelectedNode error:", e);
+    }
+  }
+
+  async function deleteImageFromSelectedNode(imageId) {
+    if (!selectedNodeId || !imageId) return;
+
+    pushHistory(nodes, edges);
+
+    try {
+      setNodes((prev) =>
+        prev.map((n) => {
+          if (n.id !== selectedNodeId) return n;
+          const prevIds = Array.isArray(n?.data?.imageIds) ? n.data.imageIds : [];
+          return { ...n, data: { ...n.data, imageIds: prevIds.filter((id) => id !== imageId) } };
+        })
+      );
+
+      await nfDeleteImage(imageId);
+      revokeImageUrl(imageId);
+      scheduleSave();
+    } catch (e) {
+      console.log("deleteImageFromSelectedNode error:", e);
+    }
   }
 
   function deleteSelectedNode() {
     if (!selectedNodeId) return;
-
     pushHistory(nodes, edges);
 
-    setNodes((prev) => prev.filter((n) => n.id !== selectedNodeId));
-    setEdges((prev) => prev.filter((e) => e.source !== selectedNodeId && e.target !== selectedNodeId));
+    const removingId = selectedNodeId;
+    const current = nodes.find((n) => n.id === removingId);
+    const imgs = Array.isArray(current?.data?.imageIds) ? current.data.imageIds : [];
+
+    setNodes((prev) => prev.filter((n) => n.id !== removingId));
+    setEdges((prev) => prev.filter((e) => e.source !== removingId && e.target !== removingId));
     setSelectedNodeId(null);
+
     didFitRef.current = false;
     scheduleSave();
+
+    // best-effort cleanup blobs
+    (async () => {
+      try {
+        for (const id of imgs) {
+          await nfDeleteImage(id);
+          revokeImageUrl(id);
+        }
+      } catch {}
+    })();
   }
 
   function deleteSelectedEdge() {
     if (!selectedEdgeId) return;
-
     pushHistory(nodes, edges);
 
     setEdges((prev) => prev.filter((e) => e.id !== selectedEdgeId));
@@ -670,7 +1040,15 @@ function App() {
   // ---------- UI: Projects ----------
   if (!currentProject) {
     return (
-      <div style={{ padding: 16, fontFamily: "Arial, sans-serif", background: "#0F0F10", minHeight: "100dvh", color: "#FFFFFF" }}>
+      <div
+        style={{
+          padding: 16,
+          fontFamily: "Arial, sans-serif",
+          background: "#0F0F10",
+          minHeight: "100dvh",
+          color: "#FFFFFF",
+        }}
+      >
         <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
           <h1 style={{ margin: 0 }}>Nodeflow</h1>
           <span style={{ opacity: 0.6, fontSize: 12 }}>
@@ -759,9 +1137,21 @@ function App() {
 
   // ---------- UI: Canvas ----------
   const saveLabel = isSaving ? "Saving…" : isDirty ? "Unsaved" : "Saved";
-  const saveChipBg = isSaving ? "rgba(111,66,255,0.18)" : isDirty ? "rgba(255,180,0,0.18)" : "rgba(0,255,160,0.14)";
-  const saveChipBorder = isSaving ? "rgba(111,66,255,0.35)" : isDirty ? "rgba(255,180,0,0.35)" : "rgba(0,255,160,0.30)";
-  const saveChipText = isSaving ? "rgba(210,200,255,1)" : isDirty ? "rgba(255,220,150,1)" : "rgba(160,255,220,1)";
+  const saveChipBg = isSaving
+    ? "rgba(111,66,255,0.18)"
+    : isDirty
+      ? "rgba(255,180,0,0.18)"
+      : "rgba(0,255,160,0.14)";
+  const saveChipBorder = isSaving
+    ? "rgba(111,66,255,0.35)"
+    : isDirty
+      ? "rgba(255,180,0,0.35)"
+      : "rgba(0,255,160,0.30)";
+  const saveChipText = isSaving
+    ? "rgba(210,200,255,1)"
+    : isDirty
+      ? "rgba(255,220,150,1)"
+      : "rgba(160,255,220,1)";
 
   return (
     <div style={{ height: "100dvh", display: "flex", flexDirection: "column", position: "relative" }}>
@@ -782,7 +1172,6 @@ function App() {
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <button
             onClick={() => {
-              // перед выходом — сохраняем сразу, если было несохранённое
               if (isDirty || isSaving) saveNow();
               setCurrentProject(null);
             }}
@@ -816,7 +1205,9 @@ function App() {
             </div>
 
             {linkMode && (
-              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.65)" }}>Link mode ON</div>
+              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.65)" }}>
+                Link mode ON
+              </div>
             )}
           </div>
         </div>
@@ -856,16 +1247,7 @@ function App() {
 
       {/* Canvas */}
       <div style={{ flex: 1, background: "#0F0F10", touchAction: "none", position: "relative" }}>
-        {/* minimap viewport: stroke only */}
-        <style>{`
-          .react-flow__minimap-viewport {
-            fill: transparent !important;
-            stroke: rgba(111, 66, 255, 0.85) !important;
-            stroke-width: 2px !important;
-          }
-        `}</style>
-
-        {/* Undo/Redo UI */}
+        {/* Undo/Redo */}
         <div
           style={{
             position: "absolute",
@@ -906,6 +1288,49 @@ function App() {
             Redo
           </button>
         </div>
+
+        {/* Hidden input */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          style={{ display: "none" }}
+          onChange={(e) => {
+            const files = e.target.files;
+            if (files && files.length) addImagesToSelectedNode(files);
+            e.target.value = "";
+          }}
+        />
+
+        {/* Preview modal */}
+        {previewUrl && (
+          <div
+            onClick={() => setPreviewUrl(null)}
+            style={{
+              position: "absolute",
+              inset: 0,
+              zIndex: 200,
+              background: "rgba(0,0,0,0.72)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 16,
+            }}
+          >
+            <img
+              src={previewUrl}
+              alt="preview"
+              style={{
+                maxWidth: "100%",
+                maxHeight: "100%",
+                borderRadius: 14,
+                border: "1px solid rgba(255,255,255,0.12)",
+              }}
+              onClick={(ev) => ev.stopPropagation()}
+            />
+          </div>
+        )}
 
         <ReactFlow
           nodes={nodes}
@@ -1027,6 +1452,24 @@ function App() {
               }}
             />
 
+            {/* Notes */}
+            <textarea
+              value={selectedNode.data?.notes || ""}
+              onChange={(e) => updateSelectedNodeNotes(e.target.value)}
+              placeholder="Notes (internal text, not shown on the node)"
+              rows={5}
+              style={{
+                padding: 10,
+                borderRadius: 10,
+                border: "1px solid rgba(255,255,255,0.12)",
+                outline: "none",
+                background: "#FFFFFF",
+                color: "#111111",
+                resize: "vertical",
+                fontFamily: "Arial, sans-serif",
+              }}
+            />
+
             <div style={{ display: "flex", gap: 8 }}>
               {["idea", "active", "done"].map((s) => (
                 <button
@@ -1046,6 +1489,44 @@ function App() {
                 </button>
               ))}
             </div>
+
+            {/* Images */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 6 }}>
+              <div style={{ fontWeight: 800 }}>Images</div>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                style={{
+                  padding: "8px 10px",
+                  borderRadius: 10,
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  background: "#151517",
+                  color: "#FFFFFF",
+                  fontWeight: 800,
+                }}
+              >
+                + Add image
+              </button>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+              {(Array.isArray(selectedNode.data?.imageIds) ? selectedNode.data.imageIds : []).map(
+                (imgId) => (
+                  <NodeImageThumb
+                    key={imgId}
+                    imageId={imgId}
+                    getUrl={getImageObjectUrl}
+                    onOpen={(url) => setPreviewUrl(url)}
+                    onDelete={() => deleteImageFromSelectedNode(imgId)}
+                  />
+                )
+              )}
+            </div>
+
+            {(Array.isArray(selectedNode.data?.imageIds) ? selectedNode.data.imageIds.length : 0) === 0 && (
+              <div style={{ opacity: 0.65, fontSize: 12 }}>
+                No images yet. Add one from your gallery.
+              </div>
+            )}
 
             <button
               onClick={deleteSelectedNode}
