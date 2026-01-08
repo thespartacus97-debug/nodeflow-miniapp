@@ -1122,17 +1122,24 @@ function App() {
       {/* Bottom sheet */}
       <div
         style={{
-          padding: 12,
-          borderTop: `1px solid ${theme.border}`,
-          fontFamily: "Arial, sans-serif",
-          background: "#111111",
-          color: "#FFFFFF",
-          maxHeight: isDetailsCollapsed ? 56 : "46dvh",
-          overflowY: isDetailsCollapsed ? "hidden" : "auto",
-          WebkitOverflowScrolling: "touch",
-          transition: "max-height 180ms ease",
-          position: "relative",
-        }}
+  position: "absolute",
+  top: 8,
+  left: "50%",
+  transform: "translateX(-50%)",
+  height: 28,
+  width: 56,
+  borderRadius: 12,
+  border: "1px solid rgba(255,255,255,0.14)",
+  background: "rgba(21,21,23,0.92)",
+  color: "rgba(255,255,255,0.85)",
+  fontWeight: 900,
+  cursor: "pointer",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  zIndex: 30,
+}}
+
       >
         {/* toggle button (only when node selected) */}
         {selectedNode && (
@@ -1151,7 +1158,7 @@ function App() {
               color: "rgba(255,255,255,0.85)",
               fontWeight: 900,
               cursor: "pointer",
-              display: explain,
+
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
