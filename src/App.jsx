@@ -4,8 +4,7 @@ import React, { useEffect, useMemo, useState, useCallback, useRef } from "react"
 import ReactFlow, {
   Background,
   Controls,
-  MiniMap,
-  Panel,
+  
   addEdge,
   applyEdgeChanges,
   applyNodeChanges,
@@ -698,65 +697,7 @@ function App() {
             )}
           </div>
 
-          {/* MiniMap (single, correct layer) */}
-          <Panel position="bottom-right">
-            <div style={{ position: "relative", pointerEvents: "auto" }}>
-              <button
-                onClick={() => setShowMiniMap((v) => !v)}
-                style={{
-                  position: "absolute",
-                  right: 8,
-                  top: 8,
-                  width: 28,
-                  height: 28,
-                  borderRadius: 10,
-                  border: "1px solid rgba(183,183,183,0.18)",
-                  background: "rgba(23,23,23,0.92)",
-                  color: "#FFFFFF",
-                  fontWeight: 900,
-                  lineHeight: "26px",
-                  zIndex: 2,
-                }}
-                aria-label="Toggle minimap"
-              >
-                {showMiniMap ? "—" : "▢"}
-              </button>
-
-              <div
-                style={{
-                  width: showMiniMap ? 160 : 54,
-                  height: showMiniMap ? 120 : 44,
-                  borderRadius: 14,
-                  overflow: "hidden",
-                  border: "1px solid rgba(183,183,183,0.18)",
-                  background: "rgba(23,23,23,0.92)",
-                  boxShadow: "0 10px 30px rgba(0,0,0,0.35)",
-                  transition: "width 120ms ease, height 120ms ease",
-                }}
-              >
-                {showMiniMap && (
-                  <MiniMap
-                    style={{ width: "100%", height: "100%" }}
-                    zoomable={false}
-                    pannable={false}
-                    maskColor="rgba(15,15,16,0.55)"
-                    nodeBorderRadius={6}
-                    nodeColor={(n) => {
-                      if (n.selected) return "#6F42FF";
-                      const st = n?.data?.status;
-                      if (st === "active") return "#00C2FF";
-                      if (st === "done") return "rgba(183,183,183,0.55)";
-                      return "rgba(183,183,183,0.85)";
-                    }}
-                    nodeStrokeColor={(n) =>
-                      n.selected ? "#6F42FF" : "rgba(255,255,255,0.10)"
-                    }
-                    nodeStrokeWidth={2}
-                  />
-                )}
-              </div>
-            </div>
-          </Panel>
+          
         </ReactFlow>
       </div>
 
