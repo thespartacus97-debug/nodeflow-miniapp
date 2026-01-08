@@ -883,21 +883,29 @@ function App() {
 
   // handlers
   const onNodesChange = useCallback(
-    (changes) => {
-      const meaningful = changes.some(
-        (c) => c.type === "position" || c.type === "dimensions" || c.type === "remove" || c.type === "add"
-      );
+  (changes) => {
+    // ВАЖНО:
+    // - во время drag приходит много position-изменений
+    // - нам нужен 1 шаг истории на 1 перетаскивание => пишем только когда dragging === false
+    const shouldCommit = changes.some((c) => {
+      if (c.type === "position") return c.dragging === false;
+      if (c.type === "remove" || c.type === "add") return true;
+      // dimensions можно оставить, но обычно не нужно:
+      // if (c.type === "dimensions") return true;
+      return false;
+    });
 
-      setNodes((nds) => {
-        const next = applyNodeChanges(changes, nds);
-        if (meaningful) pushHistory(next, edges);
-        return next;
-      });
+    setNodes((nds) => {
+      const next = applyNodeChanges(changes, nds);
+      if (shouldCommit) pushHistory(next, edges);
+      return next;
+    });
 
-      if (meaningful) scheduleSave();
-    },
-    [pushHistory, edges, scheduleSave]
-  );
+    if (shouldCommit) scheduleSave();
+  },
+  [pushHistory, edges, scheduleSave]
+);
+
 
   const onEdgesChange = useCallback(
     (changes) => {
@@ -1465,7 +1473,7 @@ overflow: "visible",
     onClick={() => setIsDetailsCollapsed((v) => !v)}
     style={{
       position: "absolute",
-      top: -14,
+      top: 8,
       left: "50%",
       transform: "translateX(-50%)",
       height: 28,
