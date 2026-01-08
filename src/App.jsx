@@ -1,8 +1,9 @@
 // TEST-MARK-XYZ
 
-import React, { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
+
 import ReactFlow, {
-  useReactFlow,
+  
   Background,
   Controls,
   MiniMap,
@@ -16,7 +17,7 @@ import ReactFlow, {
   BaseEdge,
   getBezierPath,
 } from "reactflow";
-const { fitView } = useReactFlow();
+
 
 import "reactflow/dist/style.css";
 
@@ -275,6 +276,7 @@ function App() {
   const [projects, setProjects] = useState([]);
   const [newProjectTitle, setNewProjectTitle] = useState("");
   const [currentProject, setCurrentProject] = useState(null);
+const rfRef = useRef(null);
 
   const pKey = useMemo(() => projectsStorageKey(userId), [userId]);
 
@@ -377,8 +379,9 @@ function App() {
       setNodes(safeNodes);
       setEdges(safeEdges);
       requestAnimationFrame(() => {
-  fitView({ padding: 0.2, duration: 0 });
+  rfRef.current?.fitView({ padding: 0.2, duration: 0 });
 });
+
 
     } catch {
       setNodes([]);
@@ -699,6 +702,10 @@ function App() {
           preventScrolling={true}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
+          onInit={(instance) => {
+  rfRef.current = instance;
+}}
+
           onConnect={onConnect}
           onNodeClick={(_, node) => {
             setSelectedNodeId(node.id);
