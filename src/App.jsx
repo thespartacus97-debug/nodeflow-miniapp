@@ -918,7 +918,7 @@ function App() {
                 width: isPreviewExpanded ? "100vw" : "min(92vw, 420px)",
 
                 height: isPreviewExpanded ? "100dvh" : "auto",
-                maxHeight: isPreviewExpanded ? "100dvh" : "60dvh",
+                maxHeight: isPreviewExpanded ? "100dvh" : "60dvh", 
                 borderRadius: isPreviewExpanded ? 0 : 18,
                 overflow: "hidden",
                 border: "1px solid rgba(255,255,255,0.14)",
