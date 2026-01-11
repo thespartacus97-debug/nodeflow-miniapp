@@ -34,7 +34,7 @@ const theme = {
   border: isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.12)",
 };
 
-// ---------- Storage keys ----------
+// ---------- Storage keys -----------
 function projectsStorageKey(userId) {
   return `nodeflow:projects:${userId || "guest"}`;
 }
