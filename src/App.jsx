@@ -853,18 +853,16 @@ function App() {
         </div>
       </div>
 
-       <div
-       style={{
-    flex: 1,
-    background: "#0F0F10",
-    touchAction: "none",
-    position: "relative",
-    paddingBottom: isDetailsCollapsed
-      ? `calc(96px + env(safe-area-inset-bottom))`
-      : `calc(420px + env(safe-area-inset-bottom))`,
-    boxSizing: "border-box",
-  }}
->
+             <div
+        style={{
+          flex: 1,
+          background: "#0F0F10",
+          touchAction: "none",
+          position: "relative",
+          boxSizing: "border-box",
+        }}
+      >
+
 
         {/* Hidden input */}
         <input
