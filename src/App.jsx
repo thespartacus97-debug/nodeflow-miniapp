@@ -854,7 +854,7 @@ function App() {
       </div>
 
        <div
-  style={{
+       style={{
     flex: 1,
     background: "#0F0F10",
     touchAction: "none",
@@ -1062,85 +1062,83 @@ function App() {
         </ReactFlow>
       </div>
 
-      {/* Bottom sheet (оверлей, не влияет на размер ReactFlow) */}
-{selectedNode ? (
-  <div
-    style={{
-      padding: 12,
-      borderTop: `1px solid ${theme.border}`,
-      fontFamily: "Arial, sans-serif",
-      background: "#111111",
-      color: "#FFFFFF",
+            {/* Bottom sheet */}
+      {selectedNode ? (
+        <div
+          style={{
+            borderTop: `1px solid ${theme.border}`,
+            fontFamily: "Arial, sans-serif",
+            background: "#111111",
+            color: "#FFFFFF",
+            position: "fixed",
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 120,
 
-      position: "fixed",
-      left: 0,
-      right: 0,
-      bottom: 0,
-      zIndex: 120,
+            // делаем “запас” снизу, чтобы ничего не пряталось системной панелью
+            paddingBottom: `calc(34px + env(safe-area-inset-bottom))`,
 
-      // safe-area + запас под кнопку
-      paddingBottom: `calc(20px + env(safe-area-inset-bottom))`,
 
-      maxHeight: isDetailsCollapsed ? 72 : "46dvh",
-      overflowY: isDetailsCollapsed ? "hidden" : "auto",
-      WebkitOverflowScrolling: "touch",
-      transition: "max-height 180ms ease",
-    }}
-  >
-
-          {/* toggle button */}
-          <button
-            onClick={() => setIsDetailsCollapsed((v) => !v)}
+            // высота панели
+            maxHeight: isDetailsCollapsed ? 92 : "46dvh",
+            overflow: "hidden", // важно: скролл будет внутри body
+            WebkitOverflowScrolling: "touch",
+          }}
+        >
+          {/* HEADER — не скроллится */}
+          <div
             style={{
-              position: "absolute",
-              top: -18, // ВЫШЕ ПАНЕЛИ, чтобы было видно всегда
-              left: "50%",
-              transform: "translateX(-50%)",
-              height: 30,
-              width: 62,
-              borderRadius: 14,
-              border: "1px solid rgba(255,255,255,0.14)",
-              background: "rgba(21,21,23,0.92)",
-              color: "rgba(255,255,255,0.85)",
-              fontWeight: 900,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              zIndex: 30,
-              boxShadow: "0 8px 20px rgba(0,0,0,0.35)",
+              position: "relative",
+              padding: "12px 12px 10px",
             }}
-            aria-label={isDetailsCollapsed ? "Expand panel" : "Collapse panel"}
-            title={isDetailsCollapsed ? "Expand" : "Collapse"}
           >
-            {isDetailsCollapsed ? "▴" : "▾"}
-          </button>
+            <button
+              onClick={() => setIsDetailsCollapsed((v) => !v)}
+              style={{
+                position: "absolute",
+                top: 8,
+                left: "50%",
+                transform: "translateX(-50%)",
+                height: 28,
+                width: 64,
+                borderRadius: 12,
+                border: "1px solid rgba(255,255,255,0.14)",
+                background: "rgba(21,21,23,0.92)",
+                color: "rgba(255,255,255,0.9)",
+                fontWeight: 900,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                zIndex: 30,
+              }}
+              aria-label={isDetailsCollapsed ? "Expand panel" : "Collapse panel"}
+              title={isDetailsCollapsed ? "Expand" : "Collapse"}
+            >
+              {isDetailsCollapsed ? "▴" : "▾"}
+            </button>
 
+            <div style={{ height: 28 }} />
+          </div>
+
+          {/* BODY — скроллится */}
           {isDetailsCollapsed ? null : (
-            <div style={{ display: "grid", gap: 10, paddingTop: 26 }}>
-              <div style={{ fontWeight: 900 }}>Node</div>
+            <div
+              style={{
+                padding: "0 12px 12px",
+                overflowY: "auto",
+                maxHeight: "calc(46dvh - 48px)",
+                WebkitOverflowScrolling: "touch",
+              }}
+            >
+              <div style={{ display: "grid", gap: 10 }}>
+                <div style={{ fontWeight: 900 }}>Node</div>
 
-              <input
-                value={selectedNode.data?.title || ""}
-                onChange={(e) => updateSelectedNode({ title: e.target.value })}
-                placeholder="Title"
-                style={{
-                  padding: 10,
-                  borderRadius: 10,
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  outline: "none",
-                  background: "#FFFFFF",
-                  color: "#111111",
-                }}
-              />
-
-              {/* Notes */}
-              <div style={{ position: "relative" }}>
-                <textarea
-                  value={selectedNode.data?.notes || ""}
-                  onChange={(e) => updateSelectedNodeNotes(e.target.value)}
-                  placeholder="Notes (internal text, not shown on the node)"
-                  rows={5}
+                <input
+                  value={selectedNode.data?.title || ""}
+                  onChange={(e) => updateSelectedNode({ title: e.target.value })}
+                  placeholder="Title"
                   style={{
                     padding: 10,
                     borderRadius: 10,
@@ -1148,66 +1146,126 @@ function App() {
                     outline: "none",
                     background: "#FFFFFF",
                     color: "#111111",
-                    resize: "vertical",
-                    fontFamily: "Arial, sans-serif",
-                    width: "100%",
-                    boxSizing: "border-box",
                   }}
                 />
 
-                {/* fullscreen button moved to RIGHT */}
-                <button
-                  onClick={openNotesFullscreen}
-                  style={{
-                    position: "absolute",
-                    right: 8,
-                    bottom: 8,
-                    width: 34,
-                    height: 34,
-                    borderRadius: 10,
-                    border: "1px solid rgba(0,0,0,0.12)",
-                    background: "rgba(255,255,255,0.88)",
-                    color: "#111",
-                    fontWeight: 900,
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                  aria-label="Fullscreen notes"
-                  title="Fullscreen"
-                >
-                  ⤢
-                </button>
-              </div>
-
-              <div style={{ display: "flex", gap: 8 }}>
-                {["idea", "active", "done"].map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => updateSelectedNode({ status: s })}
+                {/* Notes */}
+                <div style={{ position: "relative" }}>
+                  <textarea
+                    value={selectedNode.data?.notes || ""}
+                    onChange={(e) => updateSelectedNodeNotes(e.target.value)}
+                    placeholder="Notes (internal text, not shown on the node)"
+                    rows={5}
                     style={{
-                      flex: 1,
-                      padding: "10px 8px",
+                      padding: 10,
                       borderRadius: 10,
                       border: "1px solid rgba(255,255,255,0.12)",
-                      background: selectedNode.data?.status === s ? "#232326" : "#151517",
+                      outline: "none",
+                      background: "#FFFFFF",
+                      color: "#111111",
+                      resize: "vertical",
+                      fontFamily: "Arial, sans-serif",
+                      width: "100%",
+                      boxSizing: "border-box",
+                    }}
+                  />
+
+                  {/* fullscreen button */}
+                  <button
+                    onClick={openNotesFullscreen}
+                    style={{
+                      position: "absolute",
+                      right: 8,
+                      bottom: 8,
+                      width: 34,
+                      height: 34,
+                      borderRadius: 10,
+                      border: "1px solid rgba(0,0,0,0.12)",
+                      background: "rgba(255,255,255,0.88)",
+                      color: "#111",
+                      fontWeight: 900,
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                    aria-label="Fullscreen notes"
+                    title="Fullscreen"
+                  >
+                    ⤢
+                  </button>
+                </div>
+
+                <div style={{ display: "flex", gap: 8 }}>
+                  {["idea", "active", "done"].map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => updateSelectedNode({ status: s })}
+                      style={{
+                        flex: 1,
+                        padding: "10px 8px",
+                        borderRadius: 10,
+                        border: "1px solid rgba(255,255,255,0.12)",
+                        background: selectedNode.data?.status === s ? "#232326" : "#151517",
+                        color: "#FFFFFF",
+                        fontWeight: 800,
+                      }}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Images */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 6 }}>
+                  <div style={{ fontWeight: 900 }}>Images</div>
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    style={{
+                      padding: "8px 10px",
+                      borderRadius: 10,
+                      border: "1px solid rgba(255,255,255,0.12)",
+                      background: "#151517",
                       color: "#FFFFFF",
                       fontWeight: 800,
                     }}
                   >
-                    {s}
+                    + Add image
                   </button>
-                ))}
-              </div>
+                </div>
 
-              {/* Images */}
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 6 }}>
-                <div style={{ fontWeight: 900 }}>Images</div>
-                <button
-                  onClick={() => fileInputRef.current?.click()}
+                <div
                   style={{
-                    padding: "8px 10px",
+                    maxHeight: 260,
+                    overflowY: "auto",
+                    WebkitOverflowScrolling: "touch",
+                    paddingRight: 4,
+                    marginTop: 8,
+                  }}
+                >
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+                    {(Array.isArray(selectedNode.data?.imageIds) ? selectedNode.data.imageIds : []).map((imgId) => (
+                      <NodeImageThumb
+                        key={imgId}
+                        imageId={imgId}
+                        getUrl={getImageObjectUrl}
+                        onOpen={(url) => openPreview(url)}
+                        onDelete={() => deleteImageFromSelectedNode(imgId)}
+                      />
+                    ))}
+                  </div>
+
+                  {(Array.isArray(selectedNode.data?.imageIds) ? selectedNode.data.imageIds.length : 0) === 0 && (
+                    <div style={{ opacity: 0.65, fontSize: 12, marginTop: 8 }}>
+                      No images yet. Add one from your gallery.
+                    </div>
+                  )}
+                </div>
+
+                <button
+                  onClick={deleteSelectedNode}
+                  style={{
+                    padding: "10px 8px",
                     borderRadius: 10,
                     border: "1px solid rgba(255,255,255,0.12)",
                     background: "#151517",
@@ -1215,67 +1273,25 @@ function App() {
                     fontWeight: 800,
                   }}
                 >
-                  + Add image
+                  Delete node
                 </button>
+
+                {selectedEdgeId && linkMode ? (
+                  <button
+                    onClick={deleteSelectedEdge}
+                    style={{
+                      padding: "10px 8px",
+                      borderRadius: 10,
+                      border: "1px solid rgba(255,255,255,0.12)",
+                      background: "rgba(255,255,255,0.06)",
+                      color: "#FFFFFF",
+                      fontWeight: 800,
+                    }}
+                  >
+                    Delete selected link
+                  </button>
+                ) : null}
               </div>
-
-              <div
-                style={{
-                  maxHeight: 260,
-                  overflowY: "auto",
-                  WebkitOverflowScrolling: "touch",
-                  paddingRight: 4,
-                  marginTop: 8,
-                }}
-              >
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
-                  {(Array.isArray(selectedNode.data?.imageIds) ? selectedNode.data.imageIds : []).map((imgId) => (
-                    <NodeImageThumb
-                      key={imgId}
-                      imageId={imgId}
-                      getUrl={getImageObjectUrl}
-                      onOpen={(url) => openPreview(url)}
-                      onDelete={() => deleteImageFromSelectedNode(imgId)}
-                    />
-                  ))}
-                </div>
-
-                {(Array.isArray(selectedNode.data?.imageIds) ? selectedNode.data.imageIds.length : 0) === 0 && (
-                  <div style={{ opacity: 0.65, fontSize: 12, marginTop: 8 }}>
-                    No images yet. Add one from your gallery.
-                  </div>
-                )}
-              </div>
-
-              <button
-                onClick={deleteSelectedNode}
-                style={{
-                  padding: "10px 8px",
-                  borderRadius: 10,
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  background: "#151517",
-                  color: "#FFFFFF",
-                  fontWeight: 800,
-                }}
-              >
-                Delete node
-              </button>
-
-              {selectedEdgeId && linkMode ? (
-                <button
-                  onClick={deleteSelectedEdge}
-                  style={{
-                    padding: "10px 8px",
-                    borderRadius: 10,
-                    border: "1px solid rgba(255,255,255,0.12)",
-                    background: "rgba(255,255,255,0.06)",
-                    color: "#FFFFFF",
-                    fontWeight: 800,
-                  }}
-                >
-                  Delete selected link
-                </button>
-              ) : null}
             </div>
           )}
         </div>
