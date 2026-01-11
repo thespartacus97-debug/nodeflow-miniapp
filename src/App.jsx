@@ -853,17 +853,19 @@ function App() {
         </div>
       </div>
 
-      {/* Canvas (NO paddingBottom — чтобы не было пустой зоны и “серого” места) */}
-      <div
-        style={{
-          flex: 1,
-          minHeight: 0,
-          background: "#0F0F10",
-          touchAction: "none",
-          position: "relative",
-          overflow: "hidden",
-        }}
-      >
+       <div
+  style={{
+    flex: 1,
+    background: "#0F0F10",
+    touchAction: "none",
+    position: "relative",
+    paddingBottom: isDetailsCollapsed
+      ? `calc(96px + env(safe-area-inset-bottom))`
+      : `calc(420px + env(safe-area-inset-bottom))`,
+    boxSizing: "border-box",
+  }}
+>
+
         {/* Hidden input */}
         <input
           ref={fileInputRef}
@@ -1061,29 +1063,31 @@ function App() {
       </div>
 
       {/* Bottom sheet (оверлей, не влияет на размер ReactFlow) */}
-      {selectedNode ? (
-        <div
-          style={{
-            padding: 12,
-            borderTop: `1px solid ${theme.border}`,
-            fontFamily: "Arial, sans-serif",
-            background: "#111111",
-            color: "#FFFFFF",
-            position: "fixed",
-            left: 0,
-            right: 0,
-            bottom: 0,
-            zIndex: 120,
+{selectedNode ? (
+  <div
+    style={{
+      padding: 12,
+      borderTop: `1px solid ${theme.border}`,
+      fontFamily: "Arial, sans-serif",
+      background: "#111111",
+      color: "#FFFFFF",
 
-            // ВАЖНО: safe area + чтобы кнопка была видна
-            paddingBottom: `calc(12px + env(safe-area-inset-bottom))`,
+      position: "fixed",
+      left: 0,
+      right: 0,
+      bottom: 0,
+      zIndex: 120,
 
-            maxHeight: isDetailsCollapsed ? 62 : "46dvh",
-            overflowY: isDetailsCollapsed ? "hidden" : "auto",
-            WebkitOverflowScrolling: "touch",
-            transition: "max-height 180ms ease",
-          }}
-        >
+      // safe-area + запас под кнопку
+      paddingBottom: `calc(20px + env(safe-area-inset-bottom))`,
+
+      maxHeight: isDetailsCollapsed ? 72 : "46dvh",
+      overflowY: isDetailsCollapsed ? "hidden" : "auto",
+      WebkitOverflowScrolling: "touch",
+      transition: "max-height 180ms ease",
+    }}
+  >
+
           {/* toggle button */}
           <button
             onClick={() => setIsDetailsCollapsed((v) => !v)}
