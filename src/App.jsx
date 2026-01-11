@@ -1,11 +1,6 @@
-// DEPLOY-CHECK-2026-01-09
-// DEPLOY-CHECK 2026-01-09
-// TEST-MARK-XYZ
-
 import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import ReactFlow, {
   Background,
-  Controls,
   addEdge,
   applyEdgeChanges,
   applyNodeChanges,
@@ -220,76 +215,34 @@ function NodeCard({ data, selected, linkMode }) {
       />
 
       {/* targets */}
-      <Handle
-        type="target"
-        position={Position.Left}
-        id="t-left"
-        style={{ ...baseHandle, left: -17 }}
-      >
+      <Handle type="target" position={Position.Left} id="t-left" style={{ ...baseHandle, left: -17 }}>
         <div style={dotStyle} />
       </Handle>
-      <Handle
-        type="target"
-        position={Position.Right}
-        id="t-right"
-        style={{ ...baseHandle, right: -17 }}
-      >
+      <Handle type="target" position={Position.Right} id="t-right" style={{ ...baseHandle, right: -17 }}>
         <div style={dotStyle} />
       </Handle>
-      <Handle
-        type="target"
-        position={Position.Top}
-        id="t-top"
-        style={{ ...baseHandle, top: -17 }}
-      >
+      <Handle type="target" position={Position.Top} id="t-top" style={{ ...baseHandle, top: -17 }}>
         <div style={dotStyle} />
       </Handle>
-      <Handle
-        type="target"
-        position={Position.Bottom}
-        id="t-bottom"
-        style={{ ...baseHandle, bottom: -17 }}
-      >
+      <Handle type="target" position={Position.Bottom} id="t-bottom" style={{ ...baseHandle, bottom: -17 }}>
         <div style={dotStyle} />
       </Handle>
 
       {/* sources */}
-      <Handle
-        type="source"
-        position={Position.Left}
-        id="s-left"
-        style={{ ...baseHandle, left: -17 }}
-      >
+      <Handle type="source" position={Position.Left} id="s-left" style={{ ...baseHandle, left: -17 }}>
         <div style={dotStyle} />
       </Handle>
-      <Handle
-        type="source"
-        position={Position.Right}
-        id="s-right"
-        style={{ ...baseHandle, right: -17 }}
-      >
+      <Handle type="source" position={Position.Right} id="s-right" style={{ ...baseHandle, right: -17 }}>
         <div style={dotStyle} />
       </Handle>
-      <Handle
-        type="source"
-        position={Position.Top}
-        id="s-top"
-        style={{ ...baseHandle, top: -17 }}
-      >
+      <Handle type="source" position={Position.Top} id="s-top" style={{ ...baseHandle, top: -17 }}>
         <div style={dotStyle} />
       </Handle>
-      <Handle
-        type="source"
-        position={Position.Bottom}
-        id="s-bottom"
-        style={{ ...baseHandle, bottom: -17 }}
-      >
+      <Handle type="source" position={Position.Bottom} id="s-bottom" style={{ ...baseHandle, bottom: -17 }}>
         <div style={dotStyle} />
       </Handle>
 
-      <div style={{ fontWeight: 800, color: titleColor, fontSize: 14 }}>
-        {title}
-      </div>
+      <div style={{ fontWeight: 800, color: titleColor, fontSize: 14 }}>{title}</div>
 
       <div style={{ marginTop: 8, display: "flex", gap: 8, alignItems: "center" }}>
         <div
@@ -307,9 +260,7 @@ function NodeCard({ data, selected, linkMode }) {
         </div>
 
         {selected && (
-          <div style={{ color: "#6F42FF", fontSize: 12, fontWeight: 800 }}>
-            selected
-          </div>
+          <div style={{ color: "#6F42FF", fontSize: 12, fontWeight: 800 }}>selected</div>
         )}
       </div>
     </div>
@@ -383,12 +334,7 @@ function NodeImageThumb({ imageId, getUrl, onOpen, onDelete }) {
         <img
           src={url}
           alt="thumb"
-          style={{
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-            display: "block",
-          }}
+          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
         />
       ) : null}
     </div>
@@ -410,19 +356,9 @@ class ErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div
-          style={{
-            padding: 16,
-            fontFamily: "Arial",
-            background: "#0F0F10",
-            color: "#fff",
-            minHeight: "100dvh",
-          }}
-        >
+        <div style={{ padding: 16, fontFamily: "Arial", background: "#0F0F10", color: "#fff", minHeight: "100dvh" }}>
           <h2 style={{ marginTop: 0 }}>Nodeflow crashed</h2>
-          <div style={{ opacity: 0.8, whiteSpace: "pre-wrap" }}>
-            {this.state.message}
-          </div>
+          <div style={{ opacity: 0.8, whiteSpace: "pre-wrap" }}>{this.state.message}</div>
         </div>
       );
     }
@@ -486,15 +422,30 @@ function App() {
   const [selectedEdgeId, setSelectedEdgeId] = useState(null);
 
   const [linkMode, setLinkMode] = useState(false);
-  const [showControls, setShowControls] = useState(true);
 
   // bottom sheet collapse
   const [isDetailsCollapsed, setIsDetailsCollapsed] = useState(false);
 
   // preview / modals
   const [previewUrl, setPreviewUrl] = useState(null);
-  const [isPreviewExpanded, setIsPreviewExpanded] = useState(false);
   const [isNotesFullscreen, setIsNotesFullscreen] = useState(false);
+
+  // keyboard (fix canvas disappearing on focus)
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+
+    const onResize = () => {
+      // если высота viewport заметно уменьшилась — значит открыта клавиатура
+      const ratio = vv.height / window.innerHeight;
+      setKeyboardOpen(ratio < 0.78);
+    };
+
+    onResize();
+    vv.addEventListener("resize", onResize);
+    return () => vv.removeEventListener("resize", onResize);
+  }, []);
 
   // file input
   const fileInputRef = useRef(null);
@@ -545,18 +496,15 @@ function App() {
   // modal helpers
   const openPreview = useCallback((url) => {
     setIsNotesFullscreen(false);
-    setIsPreviewExpanded(false);
     setPreviewUrl(url);
   }, []);
 
   const closePreview = useCallback(() => {
     setPreviewUrl(null);
-    setIsPreviewExpanded(false);
   }, []);
 
   const openNotesFullscreen = useCallback(() => {
     setPreviewUrl(null);
-    setIsPreviewExpanded(false);
     setIsNotesFullscreen(true);
   }, []);
 
@@ -609,7 +557,6 @@ function App() {
     setSelectedEdgeId(null);
     setIsDetailsCollapsed(false);
     setPreviewUrl(null);
-    setIsPreviewExpanded(false);
     setIsNotesFullscreen(false);
 
     for (const [id] of imageUrlCacheRef.current.entries()) revokeImageUrl(id);
@@ -660,6 +607,7 @@ function App() {
     setNodes((prev) => [newNode, ...prev]);
     setSelectedNodeId(id);
     setSelectedEdgeId(null);
+    setIsDetailsCollapsed(false);
     didFitRef.current = false;
   }
 
@@ -756,15 +704,7 @@ function App() {
   // ---------- UI: Projects ----------
   if (!currentProject) {
     return (
-      <div
-        style={{
-          padding: 16,
-          fontFamily: "Arial, sans-serif",
-          background: "#0F0F10",
-          minHeight: "100dvh",
-          color: "#FFFFFF",
-        }}
-      >
+      <div style={{ padding: 16, fontFamily: "Arial, sans-serif", background: "#0F0F10", minHeight: "100dvh", color: "#FFFFFF" }}>
         <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
           <h1 style={{ margin: 0 }}>Nodeflow</h1>
           <span style={{ opacity: 0.6, fontSize: 12 }}>
@@ -852,16 +792,16 @@ function App() {
   }
 
   // ---------- UI: Canvas ----------
+  const canvasPadBottom = !selectedNode
+    ? 0
+    : keyboardOpen
+    ? 56
+    : isDetailsCollapsed
+    ? 56
+    : 360;
+
   return (
-    <div
-      style={{
-        height: "100dvh",
-        display: "flex",
-        flexDirection: "column",
-        position: "relative",
-        overflow: "hidden",
-      }}
-    >
+    <div style={{ height: "100dvh", display: "flex", flexDirection: "column", position: "relative" }}>
       {/* Top bar */}
       <div
         style={{
@@ -874,7 +814,6 @@ function App() {
           alignItems: "center",
           justifyContent: "space-between",
           gap: 10,
-          flex: "0 0 auto",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -898,10 +837,7 @@ function App() {
                 padding: "6px 10px",
                 borderRadius: 999,
                 border: "1px solid rgba(255,255,255,0.10)",
-                background:
-                  saveState === "saved"
-                    ? "rgba(16,185,129,0.18)"
-                    : "rgba(255,255,255,0.08)",
+                background: saveState === "saved" ? "rgba(16,185,129,0.18)" : "rgba(255,255,255,0.08)",
                 color: saveState === "saved" ? "#34D399" : "rgba(255,255,255,0.75)",
                 fontSize: 12,
                 fontWeight: 900,
@@ -950,9 +886,7 @@ function App() {
           background: "#0F0F10",
           touchAction: "none",
           position: "relative",
-          paddingBottom: isDetailsCollapsed
-            ? `calc(62px + env(safe-area-inset-bottom))`
-            : `calc(46dvh + env(safe-area-inset-bottom))`,
+          paddingBottom: canvasPadBottom,
           boxSizing: "border-box",
         }}
       >
@@ -970,7 +904,7 @@ function App() {
           }}
         />
 
-        {/* Preview modal */}
+        {/* Preview modal (NO fullscreen button now) */}
         {previewUrl && (
           <div
             onClick={closePreview}
@@ -982,17 +916,16 @@ function App() {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              padding: isPreviewExpanded ? 0 : 16,
+              padding: 16,
             }}
           >
             <div
               onClick={(ev) => ev.stopPropagation()}
               style={{
                 position: "relative",
-                width: isPreviewExpanded ? "100vw" : "min(92vw, 420px)",
-                height: isPreviewExpanded ? "100dvh" : "auto",
-                maxHeight: isPreviewExpanded ? "100dvh" : "60dvh",
-                borderRadius: isPreviewExpanded ? 0 : 18,
+                width: "min(92vw, 420px)",
+                maxHeight: "60dvh",
+                borderRadius: 18,
                 overflow: "hidden",
                 border: "1px solid rgba(255,255,255,0.14)",
                 background: "rgba(0,0,0,0.35)",
@@ -1025,24 +958,6 @@ function App() {
                 >
                   ✕
                 </button>
-
-                <button
-                  onClick={() => setIsPreviewExpanded((v) => !v)}
-                  style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: 12,
-                    border: "1px solid rgba(255,255,255,0.18)",
-                    background: "rgba(0,0,0,0.55)",
-                    color: "#fff",
-                    fontWeight: 900,
-                    cursor: "pointer",
-                  }}
-                  aria-label="Toggle expand"
-                  title={isPreviewExpanded ? "Minimize" : "Expand"}
-                >
-                  ⤢
-                </button>
               </div>
 
               <img
@@ -1050,8 +965,8 @@ function App() {
                 alt="preview"
                 style={{
                   width: "100%",
-                  height: isPreviewExpanded ? "100%" : "auto",
-                  maxHeight: isPreviewExpanded ? "100%" : "72dvh",
+                  height: "auto",
+                  maxHeight: "60dvh",
                   objectFit: "contain",
                   display: "block",
                 }}
@@ -1169,50 +1084,10 @@ function App() {
           style={{ background: "#0F0F10" }}
         >
           <Background />
-
-          {/* Controls */}
-          <div style={{ position: "absolute", left: 12, bottom: 12, zIndex: 10, pointerEvents: "auto" }}>
-            <button
-              onClick={() => setShowControls((v) => !v)}
-              style={{
-                position: "absolute",
-                left: 0,
-                bottom: 58,
-                width: 14,
-                height: 34,
-                borderRadius: 10,
-                border: "1px solid rgba(183,183,183,0.18)",
-                background: "rgba(23,23,23,0.92)",
-                color: "rgba(255,255,255,0.75)",
-                fontWeight: 900,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                zIndex: 9999,
-              }}
-              aria-label="Toggle controls"
-            >
-              {showControls ? "❮" : "❯"}
-            </button>
-
-            {showControls && (
-              <div
-                style={{
-                  marginLeft: 22,
-                  borderRadius: 14,
-                  overflow: "hidden",
-                  border: "none",
-                  background: "transparent",
-                }}
-              >
-                <Controls />
-              </div>
-            )}
-          </div>
         </ReactFlow>
       </div>
 
-      {/* Bottom sheet */}
+      {/* Bottom sheet (only when node selected) */}
       {selectedNode ? (
         <div
           style={{
@@ -1226,10 +1101,7 @@ function App() {
             right: 0,
             bottom: 0,
             zIndex: 120,
-
-            paddingBottom: `calc(12px + env(safe-area-inset-bottom))`,
-
-            maxHeight: isDetailsCollapsed ? 62 : "46dvh",
+            maxHeight: isDetailsCollapsed ? 56 : "46dvh",
             overflowY: isDetailsCollapsed ? "hidden" : "auto",
             WebkitOverflowScrolling: "touch",
             transition: "max-height 180ms ease",
@@ -1240,9 +1112,9 @@ function App() {
             onClick={() => setIsDetailsCollapsed((v) => !v)}
             style={{
               position: "absolute",
-              top: isDetailsCollapsed ? "50%" : 10,
+              top: 10,
               left: "50%",
-              transform: isDetailsCollapsed ? "translate(-50%, -50%)" : "translateX(-50%)",
+              transform: "translateX(-50%)",
               height: 28,
               width: 56,
               borderRadius: 12,
@@ -1301,7 +1173,7 @@ function App() {
                   }}
                 />
 
-                {/* fullscreen button (bottom-left) */}
+                {/* fullscreen notes button (still ok) */}
                 <button
                   onClick={openNotesFullscreen}
                   style={{
@@ -1348,14 +1220,7 @@ function App() {
               </div>
 
               {/* Images */}
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  marginTop: 6,
-                }}
-              >
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 6 }}>
                 <div style={{ fontWeight: 900 }}>Images</div>
                 <button
                   onClick={() => fileInputRef.current?.click()}
