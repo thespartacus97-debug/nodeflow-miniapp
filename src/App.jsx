@@ -5,7 +5,6 @@
 import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import ReactFlow, {
   Background,
-  Controls,
   addEdge,
   applyEdgeChanges,
   applyNodeChanges,
@@ -427,15 +426,30 @@ function App() {
   const [selectedEdgeId, setSelectedEdgeId] = useState(null);
 
   const [linkMode, setLinkMode] = useState(false);
-  const [showControls, setShowControls] = useState(true);
 
   // bottom sheet collapse
   const [isDetailsCollapsed, setIsDetailsCollapsed] = useState(false);
 
   // preview / modals
   const [previewUrl, setPreviewUrl] = useState(null);
-  const [isPreviewExpanded, setIsPreviewExpanded] = useState(false);
   const [isNotesFullscreen, setIsNotesFullscreen] = useState(false);
+
+  // keyboard (fix canvas disappearing on focus)
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+
+    const onResize = () => {
+      // если высота viewport заметно уменьшилась — значит открыта клавиатура
+      const ratio = vv.height / window.innerHeight;
+      setKeyboardOpen(ratio < 0.78);
+    };
+
+    onResize();
+    vv.addEventListener("resize", onResize);
+    return () => vv.removeEventListener("resize", onResize);
+  }, []);
 
   // file input
   const fileInputRef = useRef(null);
@@ -483,31 +497,18 @@ function App() {
     cache.delete(imageId);
   }, []);
 
-  const revokeAllImageUrls = useCallback(() => {
-    const cache = imageUrlCacheRef.current;
-    for (const [, url] of cache.entries()) {
-      try {
-        URL.revokeObjectURL(url);
-      } catch {}
-    }
-    cache.clear();
-  }, []);
-
-  // modal helpers (avoid overlay stacking)
+  // modal helpers
   const openPreview = useCallback((url) => {
     setIsNotesFullscreen(false);
-    setIsPreviewExpanded(false); // всегда открываем маленьким
     setPreviewUrl(url);
   }, []);
 
   const closePreview = useCallback(() => {
     setPreviewUrl(null);
-    setIsPreviewExpanded(false);
   }, []);
 
   const openNotesFullscreen = useCallback(() => {
     setPreviewUrl(null);
-    setIsPreviewExpanded(false);
     setIsNotesFullscreen(true);
   }, []);
 
@@ -560,11 +561,10 @@ function App() {
     setSelectedEdgeId(null);
     setIsDetailsCollapsed(false);
     setPreviewUrl(null);
-    setIsPreviewExpanded(false);
     setIsNotesFullscreen(false);
 
-    revokeAllImageUrls();
-  }, [gKey, revokeAllImageUrls]);
+    for (const [id] of imageUrlCacheRef.current.entries()) revokeImageUrl(id);
+  }, [gKey, revokeImageUrl]);
 
   // save graph
   useEffect(() => {
@@ -795,10 +795,15 @@ function App() {
     );
   }
 
-  // ---- IMPORTANT: reserve space ONLY when bottom sheet exists ----
-  const bottomReserved = selectedNode ? (isDetailsCollapsed ? 56 : 360) : 0;
-
   // ---------- UI: Canvas ----------
+  const canvasPadBottom = !selectedNode
+    ? 0
+    : keyboardOpen
+    ? 56
+    : isDetailsCollapsed
+    ? 56
+    : 360;
+
   return (
     <div style={{ height: "100dvh", display: "flex", flexDirection: "column", position: "relative" }}>
       {/* Top bar */}
@@ -885,7 +890,7 @@ function App() {
           background: "#0F0F10",
           touchAction: "none",
           position: "relative",
-          paddingBottom: bottomReserved, // ✅ нет серой полосы при старте
+          paddingBottom: canvasPadBottom,
           boxSizing: "border-box",
         }}
       >
@@ -903,7 +908,7 @@ function App() {
           }}
         />
 
-        {/* Preview modal */}
+        {/* Preview modal (NO fullscreen button now) */}
         {previewUrl && (
           <div
             onClick={closePreview}
@@ -915,17 +920,16 @@ function App() {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              padding: isPreviewExpanded ? 0 : 16,
+              padding: 16,
             }}
           >
             <div
               onClick={(ev) => ev.stopPropagation()}
               style={{
                 position: "relative",
-                width: isPreviewExpanded ? "100vw" : "min(92vw, 420px)",
-                height: isPreviewExpanded ? "100dvh" : "auto",
-                maxHeight: isPreviewExpanded ? "100dvh" : "60dvh",
-                borderRadius: isPreviewExpanded ? 0 : 18,
+                width: "min(92vw, 420px)",
+                maxHeight: "60dvh",
+                borderRadius: 18,
                 overflow: "hidden",
                 border: "1px solid rgba(255,255,255,0.14)",
                 background: "rgba(0,0,0,0.35)",
@@ -958,24 +962,6 @@ function App() {
                 >
                   ✕
                 </button>
-
-                <button
-                  onClick={() => setIsPreviewExpanded((v) => !v)}
-                  style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: 12,
-                    border: "1px solid rgba(255,255,255,0.18)",
-                    background: "rgba(0,0,0,0.55)",
-                    color: "#fff",
-                    fontWeight: 900,
-                    cursor: "pointer",
-                  }}
-                  aria-label="Toggle expand"
-                  title={isPreviewExpanded ? "Minimize" : "Expand"}
-                >
-                  ⤢
-                </button>
               </div>
 
               <img
@@ -983,8 +969,8 @@ function App() {
                 alt="preview"
                 style={{
                   width: "100%",
-                  height: isPreviewExpanded ? "100%" : "auto",
-                  maxHeight: isPreviewExpanded ? "100%" : "72dvh",
+                  height: "auto",
+                  maxHeight: "60dvh",
                   objectFit: "contain",
                   display: "block",
                 }}
@@ -1078,7 +1064,6 @@ function App() {
           onPaneClick={() => {
             setSelectedNodeId(null);
             setSelectedEdgeId(null);
-            setIsDetailsCollapsed(false);
           }}
           onEdgeClick={(_, edge) => {
             if (!linkMode) return;
@@ -1103,42 +1088,10 @@ function App() {
           style={{ background: "#0F0F10" }}
         >
           <Background />
-
-          {/* Controls */}
-          <div style={{ position: "absolute", left: 12, bottom: 12, zIndex: 10, pointerEvents: "auto" }}>
-            <button
-              onClick={() => setShowControls((v) => !v)}
-              style={{
-                position: "absolute",
-                left: 0,
-                bottom: 58,
-                width: 14,
-                height: 34,
-                borderRadius: 10,
-                border: "1px solid rgba(183,183,183,0.18)",
-                background: "rgba(23,23,23,0.92)",
-                color: "rgba(255,255,255,0.75)",
-                fontWeight: 900,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                zIndex: 9999,
-              }}
-              aria-label="Toggle controls"
-            >
-              {showControls ? "❮" : "❯"}
-            </button>
-
-            {showControls && (
-              <div style={{ marginLeft: 22, borderRadius: 14, overflow: "hidden", border: "none", background: "transparent" }}>
-                <Controls />
-              </div>
-            )}
-          </div>
         </ReactFlow>
       </div>
 
-      {/* Bottom sheet (exists ONLY when node selected) */}
+      {/* Bottom sheet (only when node selected) */}
       {selectedNode ? (
         <div
           style={{
@@ -1224,7 +1177,7 @@ function App() {
                   }}
                 />
 
-                {/* fullscreen button (bottom-left) */}
+                {/* fullscreen notes button (still ok) */}
                 <button
                   onClick={openNotesFullscreen}
                   style={{
