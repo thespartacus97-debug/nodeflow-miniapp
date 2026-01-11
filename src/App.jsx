@@ -102,9 +102,7 @@ async function nfDownscaleImage(file, maxSide = 1600, quality = 0.85) {
   const ctx = canvas.getContext("2d");
   ctx.drawImage(bmp, 0, 0, w, h);
 
-  const blob = await new Promise((resolve) =>
-    canvas.toBlob(resolve, "image/jpeg", quality)
-  );
+  const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", quality));
   return blob || file;
 }
 
@@ -162,8 +160,7 @@ function NodeCard({ data, selected, linkMode }) {
   const metaColor = "rgba(255,255,255,0.65)";
   const statusChipBg = "rgba(255,255,255,0.10)";
 
-  const statusLabel =
-    status === "done" ? "done" : status === "active" ? "active" : "idea";
+  const statusLabel = status === "done" ? "done" : status === "active" ? "active" : "idea";
 
   const dotStyle = {
     width: 10,
@@ -263,9 +260,7 @@ function NodeCard({ data, selected, linkMode }) {
           {statusLabel}
         </div>
 
-        {selected && (
-          <div style={{ color: "#6F42FF", fontSize: 12, fontWeight: 800 }}>selected</div>
-        )}
+        {selected && <div style={{ color: "#6F42FF", fontSize: 12, fontWeight: 800 }}>selected</div>}
       </div>
     </div>
   );
@@ -434,23 +429,6 @@ function App() {
   const [previewUrl, setPreviewUrl] = useState(null);
   const [isNotesFullscreen, setIsNotesFullscreen] = useState(false);
 
-  // keyboard (fix canvas disappearing on focus)
-  const [keyboardOpen, setKeyboardOpen] = useState(false);
-  useEffect(() => {
-    const vv = window.visualViewport;
-    if (!vv) return;
-
-    const onResize = () => {
-      // если высота viewport заметно уменьшилась — значит открыта клавиатура
-      const ratio = vv.height / window.innerHeight;
-      setKeyboardOpen(ratio < 0.78);
-    };
-
-    onResize();
-    vv.addEventListener("resize", onResize);
-    return () => vv.removeEventListener("resize", onResize);
-  }, []);
-
   // file input
   const fileInputRef = useRef(null);
 
@@ -611,7 +589,6 @@ function App() {
     setNodes((prev) => [newNode, ...prev]);
     setSelectedNodeId(id);
     setSelectedEdgeId(null);
-    setIsDetailsCollapsed(false);
     didFitRef.current = false;
   }
 
@@ -796,16 +773,8 @@ function App() {
   }
 
   // ---------- UI: Canvas ----------
-  const canvasPadBottom = !selectedNode
-    ? 0
-    : keyboardOpen
-    ? 56
-    : isDetailsCollapsed
-    ? 56
-    : 360;
-
   return (
-    <div style={{ height: "100dvh", display: "flex", flexDirection: "column", position: "relative" }}>
+    <div style={{ height: "100dvh", display: "flex", flexDirection: "column", position: "relative", overflow: "hidden" }}>
       {/* Top bar */}
       <div
         style={{
@@ -818,6 +787,7 @@ function App() {
           alignItems: "center",
           justifyContent: "space-between",
           gap: 10,
+          flex: "0 0 auto",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -883,15 +853,15 @@ function App() {
         </div>
       </div>
 
-      {/* Canvas */}
+      {/* Canvas (NO paddingBottom — чтобы не было пустой зоны и “серого” места) */}
       <div
         style={{
           flex: 1,
+          minHeight: 0,
           background: "#0F0F10",
           touchAction: "none",
           position: "relative",
-          paddingBottom: canvasPadBottom,
-          boxSizing: "border-box",
+          overflow: "hidden",
         }}
       >
         {/* Hidden input */}
@@ -908,7 +878,7 @@ function App() {
           }}
         />
 
-        {/* Preview modal (NO fullscreen button now) */}
+        {/* Preview modal (маленький превью, без “fullscreen”) */}
         {previewUrl && (
           <div
             onClick={closePreview}
@@ -969,8 +939,7 @@ function App() {
                 alt="preview"
                 style={{
                   width: "100%",
-                  height: "auto",
-                  maxHeight: "60dvh",
+                  height: "100%",
                   objectFit: "contain",
                   display: "block",
                 }}
@@ -1085,13 +1054,13 @@ function App() {
           deleteKeyCode={null}
           multiSelectionKeyCode={null}
           selectionKeyCode={null}
-          style={{ background: "#0F0F10" }}
+          style={{ background: "#0F0F10", width: "100%", height: "100%" }}
         >
           <Background />
         </ReactFlow>
       </div>
 
-      {/* Bottom sheet (only when node selected) */}
+      {/* Bottom sheet (оверлей, не влияет на размер ReactFlow) */}
       {selectedNode ? (
         <div
           style={{
@@ -1105,7 +1074,11 @@ function App() {
             right: 0,
             bottom: 0,
             zIndex: 120,
-            maxHeight: isDetailsCollapsed ? 56 : "46dvh",
+
+            // ВАЖНО: safe area + чтобы кнопка была видна
+            paddingBottom: `calc(12px + env(safe-area-inset-bottom))`,
+
+            maxHeight: isDetailsCollapsed ? 62 : "46dvh",
             overflowY: isDetailsCollapsed ? "hidden" : "auto",
             WebkitOverflowScrolling: "touch",
             transition: "max-height 180ms ease",
@@ -1116,12 +1089,12 @@ function App() {
             onClick={() => setIsDetailsCollapsed((v) => !v)}
             style={{
               position: "absolute",
-              top: 10,
+              top: -18, // ВЫШЕ ПАНЕЛИ, чтобы было видно всегда
               left: "50%",
               transform: "translateX(-50%)",
-              height: 28,
-              width: 56,
-              borderRadius: 12,
+              height: 30,
+              width: 62,
+              borderRadius: 14,
               border: "1px solid rgba(255,255,255,0.14)",
               background: "rgba(21,21,23,0.92)",
               color: "rgba(255,255,255,0.85)",
@@ -1131,6 +1104,7 @@ function App() {
               alignItems: "center",
               justifyContent: "center",
               zIndex: 30,
+              boxShadow: "0 8px 20px rgba(0,0,0,0.35)",
             }}
             aria-label={isDetailsCollapsed ? "Expand panel" : "Collapse panel"}
             title={isDetailsCollapsed ? "Expand" : "Collapse"}
@@ -1177,12 +1151,12 @@ function App() {
                   }}
                 />
 
-                {/* fullscreen notes button (still ok) */}
+                {/* fullscreen button moved to RIGHT */}
                 <button
                   onClick={openNotesFullscreen}
                   style={{
                     position: "absolute",
-                    left: 8,
+                    right: 8,
                     bottom: 8,
                     width: 34,
                     height: 34,
