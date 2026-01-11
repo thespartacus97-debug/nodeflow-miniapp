@@ -5,6 +5,7 @@
 import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import ReactFlow, {
   Background,
+  Controls,
   addEdge,
   applyEdgeChanges,
   applyNodeChanges,
@@ -102,7 +103,9 @@ async function nfDownscaleImage(file, maxSide = 1600, quality = 0.85) {
   const ctx = canvas.getContext("2d");
   ctx.drawImage(bmp, 0, 0, w, h);
 
-  const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", quality));
+  const blob = await new Promise((resolve) =>
+    canvas.toBlob(resolve, "image/jpeg", quality)
+  );
   return blob || file;
 }
 
@@ -160,7 +163,8 @@ function NodeCard({ data, selected, linkMode }) {
   const metaColor = "rgba(255,255,255,0.65)";
   const statusChipBg = "rgba(255,255,255,0.10)";
 
-  const statusLabel = status === "done" ? "done" : status === "active" ? "active" : "idea";
+  const statusLabel =
+    status === "done" ? "done" : status === "active" ? "active" : "idea";
 
   const dotStyle = {
     width: 10,
@@ -216,34 +220,76 @@ function NodeCard({ data, selected, linkMode }) {
       />
 
       {/* targets */}
-      <Handle type="target" position={Position.Left} id="t-left" style={{ ...baseHandle, left: -17 }}>
+      <Handle
+        type="target"
+        position={Position.Left}
+        id="t-left"
+        style={{ ...baseHandle, left: -17 }}
+      >
         <div style={dotStyle} />
       </Handle>
-      <Handle type="target" position={Position.Right} id="t-right" style={{ ...baseHandle, right: -17 }}>
+      <Handle
+        type="target"
+        position={Position.Right}
+        id="t-right"
+        style={{ ...baseHandle, right: -17 }}
+      >
         <div style={dotStyle} />
       </Handle>
-      <Handle type="target" position={Position.Top} id="t-top" style={{ ...baseHandle, top: -17 }}>
+      <Handle
+        type="target"
+        position={Position.Top}
+        id="t-top"
+        style={{ ...baseHandle, top: -17 }}
+      >
         <div style={dotStyle} />
       </Handle>
-      <Handle type="target" position={Position.Bottom} id="t-bottom" style={{ ...baseHandle, bottom: -17 }}>
+      <Handle
+        type="target"
+        position={Position.Bottom}
+        id="t-bottom"
+        style={{ ...baseHandle, bottom: -17 }}
+      >
         <div style={dotStyle} />
       </Handle>
 
       {/* sources */}
-      <Handle type="source" position={Position.Left} id="s-left" style={{ ...baseHandle, left: -17 }}>
+      <Handle
+        type="source"
+        position={Position.Left}
+        id="s-left"
+        style={{ ...baseHandle, left: -17 }}
+      >
         <div style={dotStyle} />
       </Handle>
-      <Handle type="source" position={Position.Right} id="s-right" style={{ ...baseHandle, right: -17 }}>
+      <Handle
+        type="source"
+        position={Position.Right}
+        id="s-right"
+        style={{ ...baseHandle, right: -17 }}
+      >
         <div style={dotStyle} />
       </Handle>
-      <Handle type="source" position={Position.Top} id="s-top" style={{ ...baseHandle, top: -17 }}>
+      <Handle
+        type="source"
+        position={Position.Top}
+        id="s-top"
+        style={{ ...baseHandle, top: -17 }}
+      >
         <div style={dotStyle} />
       </Handle>
-      <Handle type="source" position={Position.Bottom} id="s-bottom" style={{ ...baseHandle, bottom: -17 }}>
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        id="s-bottom"
+        style={{ ...baseHandle, bottom: -17 }}
+      >
         <div style={dotStyle} />
       </Handle>
 
-      <div style={{ fontWeight: 800, color: titleColor, fontSize: 14 }}>{title}</div>
+      <div style={{ fontWeight: 800, color: titleColor, fontSize: 14 }}>
+        {title}
+      </div>
 
       <div style={{ marginTop: 8, display: "flex", gap: 8, alignItems: "center" }}>
         <div
@@ -260,7 +306,11 @@ function NodeCard({ data, selected, linkMode }) {
           {statusLabel}
         </div>
 
-        {selected && <div style={{ color: "#6F42FF", fontSize: 12, fontWeight: 800 }}>selected</div>}
+        {selected && (
+          <div style={{ color: "#6F42FF", fontSize: 12, fontWeight: 800 }}>
+            selected
+          </div>
+        )}
       </div>
     </div>
   );
@@ -333,7 +383,12 @@ function NodeImageThumb({ imageId, getUrl, onOpen, onDelete }) {
         <img
           src={url}
           alt="thumb"
-          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            display: "block",
+          }}
         />
       ) : null}
     </div>
@@ -355,9 +410,19 @@ class ErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{ padding: 16, fontFamily: "Arial", background: "#0F0F10", color: "#fff", minHeight: "100dvh" }}>
+        <div
+          style={{
+            padding: 16,
+            fontFamily: "Arial",
+            background: "#0F0F10",
+            color: "#fff",
+            minHeight: "100dvh",
+          }}
+        >
           <h2 style={{ marginTop: 0 }}>Nodeflow crashed</h2>
-          <div style={{ opacity: 0.8, whiteSpace: "pre-wrap" }}>{this.state.message}</div>
+          <div style={{ opacity: 0.8, whiteSpace: "pre-wrap" }}>
+            {this.state.message}
+          </div>
         </div>
       );
     }
@@ -421,12 +486,14 @@ function App() {
   const [selectedEdgeId, setSelectedEdgeId] = useState(null);
 
   const [linkMode, setLinkMode] = useState(false);
+  const [showControls, setShowControls] = useState(true);
 
   // bottom sheet collapse
   const [isDetailsCollapsed, setIsDetailsCollapsed] = useState(false);
 
   // preview / modals
   const [previewUrl, setPreviewUrl] = useState(null);
+  const [isPreviewExpanded, setIsPreviewExpanded] = useState(false);
   const [isNotesFullscreen, setIsNotesFullscreen] = useState(false);
 
   // file input
@@ -478,15 +545,18 @@ function App() {
   // modal helpers
   const openPreview = useCallback((url) => {
     setIsNotesFullscreen(false);
+    setIsPreviewExpanded(false);
     setPreviewUrl(url);
   }, []);
 
   const closePreview = useCallback(() => {
     setPreviewUrl(null);
+    setIsPreviewExpanded(false);
   }, []);
 
   const openNotesFullscreen = useCallback(() => {
     setPreviewUrl(null);
+    setIsPreviewExpanded(false);
     setIsNotesFullscreen(true);
   }, []);
 
@@ -539,6 +609,7 @@ function App() {
     setSelectedEdgeId(null);
     setIsDetailsCollapsed(false);
     setPreviewUrl(null);
+    setIsPreviewExpanded(false);
     setIsNotesFullscreen(false);
 
     for (const [id] of imageUrlCacheRef.current.entries()) revokeImageUrl(id);
@@ -685,7 +756,15 @@ function App() {
   // ---------- UI: Projects ----------
   if (!currentProject) {
     return (
-      <div style={{ padding: 16, fontFamily: "Arial, sans-serif", background: "#0F0F10", minHeight: "100dvh", color: "#FFFFFF" }}>
+      <div
+        style={{
+          padding: 16,
+          fontFamily: "Arial, sans-serif",
+          background: "#0F0F10",
+          minHeight: "100dvh",
+          color: "#FFFFFF",
+        }}
+      >
         <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
           <h1 style={{ margin: 0 }}>Nodeflow</h1>
           <span style={{ opacity: 0.6, fontSize: 12 }}>
@@ -774,7 +853,15 @@ function App() {
 
   // ---------- UI: Canvas ----------
   return (
-    <div style={{ height: "100dvh", display: "flex", flexDirection: "column", position: "relative", overflow: "hidden" }}>
+    <div
+      style={{
+        height: "100dvh",
+        display: "flex",
+        flexDirection: "column",
+        position: "relative",
+        overflow: "hidden",
+      }}
+    >
       {/* Top bar */}
       <div
         style={{
@@ -811,7 +898,10 @@ function App() {
                 padding: "6px 10px",
                 borderRadius: 999,
                 border: "1px solid rgba(255,255,255,0.10)",
-                background: saveState === "saved" ? "rgba(16,185,129,0.18)" : "rgba(255,255,255,0.08)",
+                background:
+                  saveState === "saved"
+                    ? "rgba(16,185,129,0.18)"
+                    : "rgba(255,255,255,0.08)",
                 color: saveState === "saved" ? "#34D399" : "rgba(255,255,255,0.75)",
                 fontSize: 12,
                 fontWeight: 900,
@@ -853,17 +943,19 @@ function App() {
         </div>
       </div>
 
-             <div
+      {/* Canvas */}
+      <div
         style={{
           flex: 1,
           background: "#0F0F10",
           touchAction: "none",
           position: "relative",
+          paddingBottom: isDetailsCollapsed
+            ? `calc(62px + env(safe-area-inset-bottom))`
+            : `calc(46dvh + env(safe-area-inset-bottom))`,
           boxSizing: "border-box",
         }}
       >
-
-
         {/* Hidden input */}
         <input
           ref={fileInputRef}
@@ -878,7 +970,7 @@ function App() {
           }}
         />
 
-        {/* Preview modal (маленький превью, без “fullscreen”) */}
+        {/* Preview modal */}
         {previewUrl && (
           <div
             onClick={closePreview}
@@ -890,16 +982,17 @@ function App() {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              padding: 16,
+              padding: isPreviewExpanded ? 0 : 16,
             }}
           >
             <div
               onClick={(ev) => ev.stopPropagation()}
               style={{
                 position: "relative",
-                width: "min(92vw, 420px)",
-                maxHeight: "60dvh",
-                borderRadius: 18,
+                width: isPreviewExpanded ? "100vw" : "min(92vw, 420px)",
+                height: isPreviewExpanded ? "100dvh" : "auto",
+                maxHeight: isPreviewExpanded ? "100dvh" : "60dvh",
+                borderRadius: isPreviewExpanded ? 0 : 18,
                 overflow: "hidden",
                 border: "1px solid rgba(255,255,255,0.14)",
                 background: "rgba(0,0,0,0.35)",
@@ -932,6 +1025,24 @@ function App() {
                 >
                   ✕
                 </button>
+
+                <button
+                  onClick={() => setIsPreviewExpanded((v) => !v)}
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 12,
+                    border: "1px solid rgba(255,255,255,0.18)",
+                    background: "rgba(0,0,0,0.55)",
+                    color: "#fff",
+                    fontWeight: 900,
+                    cursor: "pointer",
+                  }}
+                  aria-label="Toggle expand"
+                  title={isPreviewExpanded ? "Minimize" : "Expand"}
+                >
+                  ⤢
+                </button>
               </div>
 
               <img
@@ -939,7 +1050,8 @@ function App() {
                 alt="preview"
                 style={{
                   width: "100%",
-                  height: "100%",
+                  height: isPreviewExpanded ? "100%" : "auto",
+                  maxHeight: isPreviewExpanded ? "100%" : "72dvh",
                   objectFit: "contain",
                   display: "block",
                 }}
@@ -1054,100 +1166,127 @@ function App() {
           deleteKeyCode={null}
           multiSelectionKeyCode={null}
           selectionKeyCode={null}
-          style={{ background: "#0F0F10", width: "100%", height: "100%" }}
+          style={{ background: "#0F0F10" }}
         >
           <Background />
-        </ReactFlow>
-      </div>
 
-            {/* Bottom sheet */}
-      {selectedNode ? (
-              <div
-        style={{
-          padding: isDetailsCollapsed ? 0 : 12,
-          borderTop: `1px solid ${theme.border}`,
-          fontFamily: "Arial, sans-serif",
-          background: "#111111",
-          color: "#FFFFFF",
-          position: "fixed",
-          left: 0,
-          right: 0,
-          bottom: 0,
-          zIndex: 120,
-
-          // safe-area + минимальная высота в collapsed
-          
-paddingBottom: isDetailsCollapsed
-  ? `calc(56px + env(safe-area-inset-bottom))`
-  : `calc(120px + env(safe-area-inset-bottom))`,
-
-
-maxHeight: isDetailsCollapsed ? 52 : "46dvh",
-
-          overflowY: isDetailsCollapsed ? "hidden" : "auto",
-          WebkitOverflowScrolling: "touch",
-          transition: "max-height 180ms ease",
-        }}
-      >
-
-          {/* HEADER — не скроллится */}
-          <div
-            style={{
-              position: "relative",
-              padding: "12px 12px 10px",
-            }}
-          >
-                      <button
-            onClick={() => setIsDetailsCollapsed((v) => !v)}
-            style={{
-              position: isDetailsCollapsed ? "static" : "absolute",
-              top: isDetailsCollapsed ? "50%" : 10,
-left: "50%",
-transform: isDetailsCollapsed
-  ? "translate(-50%, -50%)"
-  : "translateX(-50%)",
-
-              margin: isDetailsCollapsed ? "8px auto 0" : 0,
-              height: 28,
-              width: 56,
-
-                borderRadius: 12,
-                border: "1px solid rgba(255,255,255,0.14)",
-                background: "rgba(21,21,23,0.92)",
-                color: "rgba(255,255,255,0.9)",
+          {/* Controls */}
+          <div style={{ position: "absolute", left: 12, bottom: 12, zIndex: 10, pointerEvents: "auto" }}>
+            <button
+              onClick={() => setShowControls((v) => !v)}
+              style={{
+                position: "absolute",
+                left: 0,
+                bottom: 58,
+                width: 14,
+                height: 34,
+                borderRadius: 10,
+                border: "1px solid rgba(183,183,183,0.18)",
+                background: "rgba(23,23,23,0.92)",
+                color: "rgba(255,255,255,0.75)",
                 fontWeight: 900,
-                cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                zIndex: 30,
+                zIndex: 9999,
               }}
-              aria-label={isDetailsCollapsed ? "Expand panel" : "Collapse panel"}
-              title={isDetailsCollapsed ? "Expand" : "Collapse"}
+              aria-label="Toggle controls"
             >
-              {isDetailsCollapsed ? "▴" : "▾"}
+              {showControls ? "❮" : "❯"}
             </button>
 
-            <div style={{ height: 28 }} />
+            {showControls && (
+              <div
+                style={{
+                  marginLeft: 22,
+                  borderRadius: 14,
+                  overflow: "hidden",
+                  border: "none",
+                  background: "transparent",
+                }}
+              >
+                <Controls />
+              </div>
+            )}
           </div>
+        </ReactFlow>
+      </div>
 
-          {/* BODY — скроллится */}
+      {/* Bottom sheet */}
+      {selectedNode ? (
+        <div
+          style={{
+            padding: 12,
+            borderTop: `1px solid ${theme.border}`,
+            fontFamily: "Arial, sans-serif",
+            background: "#111111",
+            color: "#FFFFFF",
+            position: "fixed",
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 120,
+
+            paddingBottom: `calc(12px + env(safe-area-inset-bottom))`,
+
+            maxHeight: isDetailsCollapsed ? 62 : "46dvh",
+            overflowY: isDetailsCollapsed ? "hidden" : "auto",
+            WebkitOverflowScrolling: "touch",
+            transition: "max-height 180ms ease",
+          }}
+        >
+          {/* toggle button */}
+          <button
+            onClick={() => setIsDetailsCollapsed((v) => !v)}
+            style={{
+              position: "absolute",
+              top: isDetailsCollapsed ? "50%" : 10,
+              left: "50%",
+              transform: isDetailsCollapsed ? "translate(-50%, -50%)" : "translateX(-50%)",
+              height: 28,
+              width: 56,
+              borderRadius: 12,
+              border: "1px solid rgba(255,255,255,0.14)",
+              background: "rgba(21,21,23,0.92)",
+              color: "rgba(255,255,255,0.85)",
+              fontWeight: 900,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 30,
+            }}
+            aria-label={isDetailsCollapsed ? "Expand panel" : "Collapse panel"}
+            title={isDetailsCollapsed ? "Expand" : "Collapse"}
+          >
+            {isDetailsCollapsed ? "▴" : "▾"}
+          </button>
+
           {isDetailsCollapsed ? null : (
-            <div
-              style={{
-                padding: "0 12px 12px",
-                overflowY: "auto",
-                maxHeight: "calc(46dvh - 48px)",
-                WebkitOverflowScrolling: "touch",
-              }}
-            >
-              <div style={{ display: "grid", gap: 10 }}>
-                <div style={{ fontWeight: 900 }}>Node</div>
+            <div style={{ display: "grid", gap: 10, paddingTop: 26 }}>
+              <div style={{ fontWeight: 900 }}>Node</div>
 
-                <input
-                  value={selectedNode.data?.title || ""}
-                  onChange={(e) => updateSelectedNode({ title: e.target.value })}
-                  placeholder="Title"
+              <input
+                value={selectedNode.data?.title || ""}
+                onChange={(e) => updateSelectedNode({ title: e.target.value })}
+                placeholder="Title"
+                style={{
+                  padding: 10,
+                  borderRadius: 10,
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  outline: "none",
+                  background: "#FFFFFF",
+                  color: "#111111",
+                }}
+              />
+
+              {/* Notes */}
+              <div style={{ position: "relative" }}>
+                <textarea
+                  value={selectedNode.data?.notes || ""}
+                  onChange={(e) => updateSelectedNodeNotes(e.target.value)}
+                  placeholder="Notes (internal text, not shown on the node)"
+                  rows={5}
                   style={{
                     padding: 10,
                     borderRadius: 10,
@@ -1155,126 +1294,73 @@ transform: isDetailsCollapsed
                     outline: "none",
                     background: "#FFFFFF",
                     color: "#111111",
+                    resize: "vertical",
+                    fontFamily: "Arial, sans-serif",
+                    width: "100%",
+                    boxSizing: "border-box",
                   }}
                 />
 
-                {/* Notes */}
-                <div style={{ position: "relative" }}>
-                  <textarea
-                    value={selectedNode.data?.notes || ""}
-                    onChange={(e) => updateSelectedNodeNotes(e.target.value)}
-                    placeholder="Notes (internal text, not shown on the node)"
-                    rows={5}
+                {/* fullscreen button (bottom-left) */}
+                <button
+                  onClick={openNotesFullscreen}
+                  style={{
+                    position: "absolute",
+                    left: 8,
+                    bottom: 8,
+                    width: 34,
+                    height: 34,
+                    borderRadius: 10,
+                    border: "1px solid rgba(0,0,0,0.12)",
+                    background: "rgba(255,255,255,0.88)",
+                    color: "#111",
+                    fontWeight: 900,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                  aria-label="Fullscreen notes"
+                  title="Fullscreen"
+                >
+                  ⤢
+                </button>
+              </div>
+
+              <div style={{ display: "flex", gap: 8 }}>
+                {["idea", "active", "done"].map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => updateSelectedNode({ status: s })}
                     style={{
-                      padding: 10,
+                      flex: 1,
+                      padding: "10px 8px",
                       borderRadius: 10,
                       border: "1px solid rgba(255,255,255,0.12)",
-                      outline: "none",
-                      background: "#FFFFFF",
-                      color: "#111111",
-                      resize: "vertical",
-                      fontFamily: "Arial, sans-serif",
-                      width: "100%",
-                      boxSizing: "border-box",
-                    }}
-                  />
-
-                  {/* fullscreen button */}
-                  <button
-                    onClick={openNotesFullscreen}
-                    style={{
-                      position: "absolute",
-                      right: 8,
-                      bottom: 8,
-                      width: 34,
-                      height: 34,
-                      borderRadius: 10,
-                      border: "1px solid rgba(0,0,0,0.12)",
-                      background: "rgba(255,255,255,0.88)",
-                      color: "#111",
-                      fontWeight: 900,
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                    aria-label="Fullscreen notes"
-                    title="Fullscreen"
-                  >
-                    ⤢
-                  </button>
-                </div>
-
-                <div style={{ display: "flex", gap: 8 }}>
-                  {["idea", "active", "done"].map((s) => (
-                    <button
-                      key={s}
-                      onClick={() => updateSelectedNode({ status: s })}
-                      style={{
-                        flex: 1,
-                        padding: "10px 8px",
-                        borderRadius: 10,
-                        border: "1px solid rgba(255,255,255,0.12)",
-                        background: selectedNode.data?.status === s ? "#232326" : "#151517",
-                        color: "#FFFFFF",
-                        fontWeight: 800,
-                      }}
-                    >
-                      {s}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Images */}
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 6 }}>
-                  <div style={{ fontWeight: 900 }}>Images</div>
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    style={{
-                      padding: "8px 10px",
-                      borderRadius: 10,
-                      border: "1px solid rgba(255,255,255,0.12)",
-                      background: "#151517",
+                      background: selectedNode.data?.status === s ? "#232326" : "#151517",
                       color: "#FFFFFF",
                       fontWeight: 800,
                     }}
                   >
-                    + Add image
+                    {s}
                   </button>
-                </div>
+                ))}
+              </div>
 
-                <div
-                  style={{
-                    maxHeight: 260,
-                    overflowY: "auto",
-                    WebkitOverflowScrolling: "touch",
-                    paddingRight: 4,
-                    marginTop: 8,
-                  }}
-                >
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
-                    {(Array.isArray(selectedNode.data?.imageIds) ? selectedNode.data.imageIds : []).map((imgId) => (
-                      <NodeImageThumb
-                        key={imgId}
-                        imageId={imgId}
-                        getUrl={getImageObjectUrl}
-                        onOpen={(url) => openPreview(url)}
-                        onDelete={() => deleteImageFromSelectedNode(imgId)}
-                      />
-                    ))}
-                  </div>
-
-                  {(Array.isArray(selectedNode.data?.imageIds) ? selectedNode.data.imageIds.length : 0) === 0 && (
-                    <div style={{ opacity: 0.65, fontSize: 12, marginTop: 8 }}>
-                      No images yet. Add one from your gallery.
-                    </div>
-                  )}
-                </div>
-
+              {/* Images */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  marginTop: 6,
+                }}
+              >
+                <div style={{ fontWeight: 900 }}>Images</div>
                 <button
-                  onClick={deleteSelectedNode}
+                  onClick={() => fileInputRef.current?.click()}
                   style={{
-                    padding: "10px 8px",
+                    padding: "8px 10px",
                     borderRadius: 10,
                     border: "1px solid rgba(255,255,255,0.12)",
                     background: "#151517",
@@ -1282,25 +1368,67 @@ transform: isDetailsCollapsed
                     fontWeight: 800,
                   }}
                 >
-                  Delete node
+                  + Add image
                 </button>
-
-                {selectedEdgeId && linkMode ? (
-                  <button
-                    onClick={deleteSelectedEdge}
-                    style={{
-                      padding: "10px 8px",
-                      borderRadius: 10,
-                      border: "1px solid rgba(255,255,255,0.12)",
-                      background: "rgba(255,255,255,0.06)",
-                      color: "#FFFFFF",
-                      fontWeight: 800,
-                    }}
-                  >
-                    Delete selected link
-                  </button>
-                ) : null}
               </div>
+
+              <div
+                style={{
+                  maxHeight: 260,
+                  overflowY: "auto",
+                  WebkitOverflowScrolling: "touch",
+                  paddingRight: 4,
+                  marginTop: 8,
+                }}
+              >
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+                  {(Array.isArray(selectedNode.data?.imageIds) ? selectedNode.data.imageIds : []).map((imgId) => (
+                    <NodeImageThumb
+                      key={imgId}
+                      imageId={imgId}
+                      getUrl={getImageObjectUrl}
+                      onOpen={(url) => openPreview(url)}
+                      onDelete={() => deleteImageFromSelectedNode(imgId)}
+                    />
+                  ))}
+                </div>
+
+                {(Array.isArray(selectedNode.data?.imageIds) ? selectedNode.data.imageIds.length : 0) === 0 && (
+                  <div style={{ opacity: 0.65, fontSize: 12, marginTop: 8 }}>
+                    No images yet. Add one from your gallery.
+                  </div>
+                )}
+              </div>
+
+              <button
+                onClick={deleteSelectedNode}
+                style={{
+                  padding: "10px 8px",
+                  borderRadius: 10,
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  background: "#151517",
+                  color: "#FFFFFF",
+                  fontWeight: 800,
+                }}
+              >
+                Delete node
+              </button>
+
+              {selectedEdgeId && linkMode ? (
+                <button
+                  onClick={deleteSelectedEdge}
+                  style={{
+                    padding: "10px 8px",
+                    borderRadius: 10,
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    background: "rgba(255,255,255,0.06)",
+                    color: "#FFFFFF",
+                    fontWeight: 800,
+                  }}
+                >
+                  Delete selected link
+                </button>
+              ) : null}
             </div>
           )}
         </div>
