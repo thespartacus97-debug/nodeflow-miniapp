@@ -1,7 +1,6 @@
 // DEPLOY-CHECK-2026-01-09
-
+// DEPLOY-CHECK 2026-01-09
 // TEST-MARK-XYZ
-
 
 import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import ReactFlow, {
@@ -430,7 +429,7 @@ function App() {
   const [linkMode, setLinkMode] = useState(false);
   const [showControls, setShowControls] = useState(true);
 
-  // bottom sheet collapse (IMPORTANT FIX)
+  // bottom sheet collapse
   const [isDetailsCollapsed, setIsDetailsCollapsed] = useState(false);
 
   // preview / modals
@@ -484,22 +483,34 @@ function App() {
     cache.delete(imageId);
   }, []);
 
+  const revokeAllImageUrls = useCallback(() => {
+    const cache = imageUrlCacheRef.current;
+    for (const [, url] of cache.entries()) {
+      try {
+        URL.revokeObjectURL(url);
+      } catch {}
+    }
+    cache.clear();
+  }, []);
+
   // modal helpers (avoid overlay stacking)
   const openPreview = useCallback((url) => {
-  setIsNotesFullscreen(false);
-  setIsPreviewExpanded(false);
-  setPreviewUrl(url);
-}, []);
+    setIsNotesFullscreen(false);
+    setIsPreviewExpanded(false); // всегда открываем маленьким
+    setPreviewUrl(url);
+  }, []);
 
   const closePreview = useCallback(() => {
     setPreviewUrl(null);
     setIsPreviewExpanded(false);
   }, []);
+
   const openNotesFullscreen = useCallback(() => {
     setPreviewUrl(null);
     setIsPreviewExpanded(false);
     setIsNotesFullscreen(true);
   }, []);
+
   const closeNotesFullscreen = useCallback(() => {
     setIsNotesFullscreen(false);
   }, []);
@@ -552,9 +563,8 @@ function App() {
     setIsPreviewExpanded(false);
     setIsNotesFullscreen(false);
 
-    // clear old cached urls (safe)
-    for (const [id] of imageUrlCacheRef.current.entries()) revokeImageUrl(id);
-  }, [gKey, revokeImageUrl]);
+    revokeAllImageUrls();
+  }, [gKey, revokeAllImageUrls]);
 
   // save graph
   useEffect(() => {
@@ -578,26 +588,17 @@ function App() {
   }, [gKey, nodes.length]);
 
   // node/edge handlers
-  const onNodesChange = useCallback(
-    (changes) => {
-      setNodes((nds) => applyNodeChanges(changes, nds));
-    },
-    []
-  );
+  const onNodesChange = useCallback((changes) => {
+    setNodes((nds) => applyNodeChanges(changes, nds));
+  }, []);
 
-  const onEdgesChange = useCallback(
-    (changes) => {
-      setEdges((eds) => applyEdgeChanges(changes, eds));
-    },
-    []
-  );
+  const onEdgesChange = useCallback((changes) => {
+    setEdges((eds) => applyEdgeChanges(changes, eds));
+  }, []);
 
-  const onConnect = useCallback(
-    (params) => {
-      setEdges((eds) => addEdge({ ...params, type: "nf" }, eds));
-    },
-    []
-  );
+  const onConnect = useCallback((params) => {
+    setEdges((eds) => addEdge({ ...params, type: "nf" }, eds));
+  }, []);
 
   function addNode() {
     const id = crypto.randomUUID();
@@ -610,6 +611,7 @@ function App() {
     setNodes((prev) => [newNode, ...prev]);
     setSelectedNodeId(id);
     setSelectedEdgeId(null);
+    setIsDetailsCollapsed(false);
     didFitRef.current = false;
   }
 
@@ -793,6 +795,9 @@ function App() {
     );
   }
 
+  // ---- IMPORTANT: reserve space ONLY when bottom sheet exists ----
+  const bottomReserved = selectedNode ? (isDetailsCollapsed ? 56 : 360) : 0;
+
   // ---------- UI: Canvas ----------
   return (
     <div style={{ height: "100dvh", display: "flex", flexDirection: "column", position: "relative" }}>
@@ -875,16 +880,15 @@ function App() {
 
       {/* Canvas */}
       <div
-  style={{
-    flex: 1,
-    background: "#0F0F10",
-    touchAction: "none",
-    position: "relative",
-    paddingBottom: isDetailsCollapsed ? 56 : 360, // место под нижнюю панель
-    boxSizing: "border-box",
-  }}
->
-
+        style={{
+          flex: 1,
+          background: "#0F0F10",
+          touchAction: "none",
+          position: "relative",
+          paddingBottom: bottomReserved, // ✅ нет серой полосы при старте
+          boxSizing: "border-box",
+        }}
+      >
         {/* Hidden input */}
         <input
           ref={fileInputRef}
@@ -919,9 +923,8 @@ function App() {
               style={{
                 position: "relative",
                 width: isPreviewExpanded ? "100vw" : "min(92vw, 420px)",
-
                 height: isPreviewExpanded ? "100dvh" : "auto",
-                maxHeight: isPreviewExpanded ? "100dvh" : "60dvh", 
+                maxHeight: isPreviewExpanded ? "100dvh" : "60dvh",
                 borderRadius: isPreviewExpanded ? 0 : 18,
                 overflow: "hidden",
                 border: "1px solid rgba(255,255,255,0.14)",
@@ -1075,6 +1078,7 @@ function App() {
           onPaneClick={() => {
             setSelectedNodeId(null);
             setSelectedEdgeId(null);
+            setIsDetailsCollapsed(false);
           }}
           onEdgeClick={(_, edge) => {
             if (!linkMode) return;
@@ -1134,33 +1138,27 @@ function App() {
         </ReactFlow>
       </div>
 
-      {/* Bottom sheet */}
+      {/* Bottom sheet (exists ONLY when node selected) */}
       {selectedNode ? (
-      <div
-        style={{
-        padding: 12,
-        borderTop: `1px solid ${theme.border}`,
-       fontFamily: "Arial, sans-serif",
-       background: "#111111",
-       color: "#FFFFFF",
-
-       position: "fixed",
-       left: 0,
-         right: 0,
-        bottom: 0,
-      zIndex: 120,
- 
-  maxHeight: isDetailsCollapsed ? 56 : "46dvh",
-  overflowY: isDetailsCollapsed ? "hidden" : "auto",
-  WebkitOverflowScrolling: "touch",
-  transition: "max-height 180ms ease",
-  
-}}
-
-
-      >
-        {/* toggle button (only when node selected) */}
-        {selectedNode && (
+        <div
+          style={{
+            padding: 12,
+            borderTop: `1px solid ${theme.border}`,
+            fontFamily: "Arial, sans-serif",
+            background: "#111111",
+            color: "#FFFFFF",
+            position: "fixed",
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 120,
+            maxHeight: isDetailsCollapsed ? 56 : "46dvh",
+            overflowY: isDetailsCollapsed ? "hidden" : "auto",
+            WebkitOverflowScrolling: "touch",
+            transition: "max-height 180ms ease",
+          }}
+        >
+          {/* toggle button */}
           <button
             onClick={() => setIsDetailsCollapsed((v) => !v)}
             style={{
@@ -1176,7 +1174,6 @@ function App() {
               color: "rgba(255,255,255,0.85)",
               fontWeight: 900,
               cursor: "pointer",
-
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -1187,35 +1184,15 @@ function App() {
           >
             {isDetailsCollapsed ? "▴" : "▾"}
           </button>
-        )}
 
-        {isDetailsCollapsed ? null : !selectedNode ? (
-          <div style={{ opacity: 0.65, paddingTop: 8 }}>Tap a node to edit.</div>
-        ) : (
-          <div style={{ display: "grid", gap: 10, paddingTop: 26 }}>
-            <div style={{ fontWeight: 900 }}>Node</div>
+          {isDetailsCollapsed ? null : (
+            <div style={{ display: "grid", gap: 10, paddingTop: 26 }}>
+              <div style={{ fontWeight: 900 }}>Node</div>
 
-            <input
-              value={selectedNode.data?.title || ""}
-              onChange={(e) => updateSelectedNode({ title: e.target.value })}
-              placeholder="Title"
-              style={{
-                padding: 10,
-                borderRadius: 10,
-                border: "1px solid rgba(255,255,255,0.12)",
-                outline: "none",
-                background: "#FFFFFF",
-                color: "#111111",
-              }}
-            />
-
-            {/* Notes */}
-            <div style={{ position: "relative" }}>
-              <textarea
-                value={selectedNode.data?.notes || ""}
-                onChange={(e) => updateSelectedNodeNotes(e.target.value)}
-                placeholder="Notes (internal text, not shown on the node)"
-                rows={5}
+              <input
+                value={selectedNode.data?.title || ""}
+                onChange={(e) => updateSelectedNode({ title: e.target.value })}
+                placeholder="Title"
                 style={{
                   padding: 10,
                   borderRadius: 10,
@@ -1223,66 +1200,126 @@ function App() {
                   outline: "none",
                   background: "#FFFFFF",
                   color: "#111111",
-                  resize: "vertical",
-                  fontFamily: "Arial, sans-serif",
-                  width: "100%",
-                  boxSizing: "border-box",
                 }}
               />
 
-              {/* fullscreen button (bottom-left) */}
-              <button
-                onClick={openNotesFullscreen}
-                style={{
-                  position: "absolute",
-                  left: 8,
-                  bottom: 8,
-                  width: 34,
-                  height: 34,
-                  borderRadius: 10,
-                  border: "1px solid rgba(0,0,0,0.12)",
-                  background: "rgba(255,255,255,0.88)",
-                  color: "#111",
-                  fontWeight: 900,
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-                aria-label="Fullscreen notes"
-                title="Fullscreen"
-              >
-                ⤢
-              </button>
-            </div>
-
-            <div style={{ display: "flex", gap: 8 }}>
-              {["idea", "active", "done"].map((s) => (
-                <button
-                  key={s}
-                  onClick={() => updateSelectedNode({ status: s })}
+              {/* Notes */}
+              <div style={{ position: "relative" }}>
+                <textarea
+                  value={selectedNode.data?.notes || ""}
+                  onChange={(e) => updateSelectedNodeNotes(e.target.value)}
+                  placeholder="Notes (internal text, not shown on the node)"
+                  rows={5}
                   style={{
-                    flex: 1,
-                    padding: "10px 8px",
+                    padding: 10,
                     borderRadius: 10,
                     border: "1px solid rgba(255,255,255,0.12)",
-                    background: selectedNode.data?.status === s ? "#232326" : "#151517",
+                    outline: "none",
+                    background: "#FFFFFF",
+                    color: "#111111",
+                    resize: "vertical",
+                    fontFamily: "Arial, sans-serif",
+                    width: "100%",
+                    boxSizing: "border-box",
+                  }}
+                />
+
+                {/* fullscreen button (bottom-left) */}
+                <button
+                  onClick={openNotesFullscreen}
+                  style={{
+                    position: "absolute",
+                    left: 8,
+                    bottom: 8,
+                    width: 34,
+                    height: 34,
+                    borderRadius: 10,
+                    border: "1px solid rgba(0,0,0,0.12)",
+                    background: "rgba(255,255,255,0.88)",
+                    color: "#111",
+                    fontWeight: 900,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                  aria-label="Fullscreen notes"
+                  title="Fullscreen"
+                >
+                  ⤢
+                </button>
+              </div>
+
+              <div style={{ display: "flex", gap: 8 }}>
+                {["idea", "active", "done"].map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => updateSelectedNode({ status: s })}
+                    style={{
+                      flex: 1,
+                      padding: "10px 8px",
+                      borderRadius: 10,
+                      border: "1px solid rgba(255,255,255,0.12)",
+                      background: selectedNode.data?.status === s ? "#232326" : "#151517",
+                      color: "#FFFFFF",
+                      fontWeight: 800,
+                    }}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+
+              {/* Images */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 6 }}>
+                <div style={{ fontWeight: 900 }}>Images</div>
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  style={{
+                    padding: "8px 10px",
+                    borderRadius: 10,
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    background: "#151517",
                     color: "#FFFFFF",
                     fontWeight: 800,
                   }}
                 >
-                  {s}
+                  + Add image
                 </button>
-              ))}
-            </div>
+              </div>
 
-            {/* Images */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 6 }}>
-              <div style={{ fontWeight: 900 }}>Images</div>
-              <button
-                onClick={() => fileInputRef.current?.click()}
+              <div
                 style={{
-                  padding: "8px 10px",
+                  maxHeight: 260,
+                  overflowY: "auto",
+                  WebkitOverflowScrolling: "touch",
+                  paddingRight: 4,
+                  marginTop: 8,
+                }}
+              >
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+                  {(Array.isArray(selectedNode.data?.imageIds) ? selectedNode.data.imageIds : []).map((imgId) => (
+                    <NodeImageThumb
+                      key={imgId}
+                      imageId={imgId}
+                      getUrl={getImageObjectUrl}
+                      onOpen={(url) => openPreview(url)}
+                      onDelete={() => deleteImageFromSelectedNode(imgId)}
+                    />
+                  ))}
+                </div>
+
+                {(Array.isArray(selectedNode.data?.imageIds) ? selectedNode.data.imageIds.length : 0) === 0 && (
+                  <div style={{ opacity: 0.65, fontSize: 12, marginTop: 8 }}>
+                    No images yet. Add one from your gallery.
+                  </div>
+                )}
+              </div>
+
+              <button
+                onClick={deleteSelectedNode}
+                style={{
+                  padding: "10px 8px",
                   borderRadius: 10,
                   border: "1px solid rgba(255,255,255,0.12)",
                   background: "#151517",
@@ -1290,72 +1327,28 @@ function App() {
                   fontWeight: 800,
                 }}
               >
-                + Add image
+                Delete node
               </button>
+
+              {selectedEdgeId && linkMode ? (
+                <button
+                  onClick={deleteSelectedEdge}
+                  style={{
+                    padding: "10px 8px",
+                    borderRadius: 10,
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    background: "rgba(255,255,255,0.06)",
+                    color: "#FFFFFF",
+                    fontWeight: 800,
+                  }}
+                >
+                  Delete selected link
+                </button>
+              ) : null}
             </div>
-
-            <div
-              style={{
-                maxHeight: 260,
-                overflowY: "auto",
-                WebkitOverflowScrolling: "touch",
-                paddingRight: 4,
-                marginTop: 8,
-              }}
-            >
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
-                {(Array.isArray(selectedNode.data?.imageIds) ? selectedNode.data.imageIds : []).map((imgId) => (
-                  <NodeImageThumb
-                    key={imgId}
-                    imageId={imgId}
-                    getUrl={getImageObjectUrl}
-                    onOpen={(url) => openPreview(url)}
-                    onDelete={() => deleteImageFromSelectedNode(imgId)}
-                  />
-                ))}
-              </div>
-
-              {(Array.isArray(selectedNode.data?.imageIds) ? selectedNode.data.imageIds.length : 0) === 0 && (
-                <div style={{ opacity: 0.65, fontSize: 12, marginTop: 8 }}>
-                  No images yet. Add one from your gallery.
-                </div>
-              )}
-            </div>
-
-            <button
-              onClick={deleteSelectedNode}
-              style={{
-                padding: "10px 8px",
-                borderRadius: 10,
-                border: "1px solid rgba(255,255,255,0.12)",
-                background: "#151517",
-                color: "#FFFFFF",
-                fontWeight: 800,
-              }}
-            >
-              Delete node
-            </button>
-
-            {selectedEdgeId && linkMode ? (
-              <button
-                onClick={deleteSelectedEdge}
-                style={{
-                  padding: "10px 8px",
-                  borderRadius: 10,
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  background: "rgba(255,255,255,0.06)",
-                  color: "#FFFFFF",
-                  fontWeight: 800,
-                }}
-              >
-                Delete selected link
-              </button>
-            ) : null}
-          </div>
-        )}
-      </div>
+          )}
+        </div>
       ) : null}
-
     </div>
   );
 }
@@ -1367,4 +1360,3 @@ export default function AppWithBoundary() {
     </ErrorBoundary>
   );
 }
-// а че тест 
