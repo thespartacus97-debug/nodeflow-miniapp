@@ -1062,28 +1062,31 @@ function App() {
 
             {/* Bottom sheet */}
       {selectedNode ? (
-        <div
-          style={{
-            borderTop: `1px solid ${theme.border}`,
-            fontFamily: "Arial, sans-serif",
-            background: "#111111",
-            color: "#FFFFFF",
-            position: "fixed",
-            left: 0,
-            right: 0,
-            bottom: 0,
-            zIndex: 120,
+              <div
+        style={{
+          padding: isDetailsCollapsed ? 0 : 12,
+          borderTop: `1px solid ${theme.border}`,
+          fontFamily: "Arial, sans-serif",
+          background: "#111111",
+          color: "#FFFFFF",
+          position: "fixed",
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 120,
 
-            // делаем “запас” снизу, чтобы ничего не пряталось системной панелью
-            paddingBottom: `calc(34px + env(safe-area-inset-bottom))`,
+          // safe-area + минимальная высота в collapsed
+          paddingBottom: `calc(${isDetailsCollapsed ? 8 : 12}px + env(safe-area-inset-bottom))`,
 
+          maxHeight: isDetailsCollapsed
+            ? `calc(44px + env(safe-area-inset-bottom))`
+            : "46dvh",
+          overflowY: isDetailsCollapsed ? "hidden" : "auto",
+          WebkitOverflowScrolling: "touch",
+          transition: "max-height 180ms ease",
+        }}
+      >
 
-            // высота панели
-            maxHeight: isDetailsCollapsed ? 92 : "46dvh",
-            overflow: "hidden", // важно: скролл будет внутри body
-            WebkitOverflowScrolling: "touch",
-          }}
-        >
           {/* HEADER — не скроллится */}
           <div
             style={{
@@ -1091,15 +1094,17 @@ function App() {
               padding: "12px 12px 10px",
             }}
           >
-            <button
-              onClick={() => setIsDetailsCollapsed((v) => !v)}
-              style={{
-                position: "absolute",
-                top: 8,
-                left: "50%",
-                transform: "translateX(-50%)",
-                height: 28,
-                width: 64,
+                      <button
+            onClick={() => setIsDetailsCollapsed((v) => !v)}
+            style={{
+              position: isDetailsCollapsed ? "static" : "absolute",
+              top: isDetailsCollapsed ? undefined : 10,
+              left: isDetailsCollapsed ? undefined : "50%",
+              transform: isDetailsCollapsed ? undefined : "translateX(-50%)",
+              margin: isDetailsCollapsed ? "8px auto 0" : 0,
+              height: 28,
+              width: 56,
+
                 borderRadius: 12,
                 border: "1px solid rgba(255,255,255,0.14)",
                 background: "rgba(21,21,23,0.92)",
