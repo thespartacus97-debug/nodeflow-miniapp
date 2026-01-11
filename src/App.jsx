@@ -1076,11 +1076,14 @@ function App() {
           zIndex: 120,
 
           // safe-area + минимальная высота в collapsed
-          paddingBottom: `calc(${isDetailsCollapsed ? 8 : 12}px + env(safe-area-inset-bottom))`,
+          
+paddingBottom: isDetailsCollapsed
+  ? `calc(56px + env(safe-area-inset-bottom))`
+  : `calc(120px + env(safe-area-inset-bottom))`,
 
-          maxHeight: isDetailsCollapsed
-            ? `calc(44px + env(safe-area-inset-bottom))`
-            : "46dvh",
+
+maxHeight: isDetailsCollapsed ? 52 : "46dvh",
+
           overflowY: isDetailsCollapsed ? "hidden" : "auto",
           WebkitOverflowScrolling: "touch",
           transition: "max-height 180ms ease",
@@ -1098,9 +1101,12 @@ function App() {
             onClick={() => setIsDetailsCollapsed((v) => !v)}
             style={{
               position: isDetailsCollapsed ? "static" : "absolute",
-              top: isDetailsCollapsed ? undefined : 10,
-              left: isDetailsCollapsed ? undefined : "50%",
-              transform: isDetailsCollapsed ? undefined : "translateX(-50%)",
+              top: isDetailsCollapsed ? "50%" : 10,
+left: "50%",
+transform: isDetailsCollapsed
+  ? "translate(-50%, -50%)"
+  : "translateX(-50%)",
+
               margin: isDetailsCollapsed ? "8px auto 0" : 0,
               height: 28,
               width: 56,
