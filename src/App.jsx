@@ -1098,13 +1098,20 @@ function App() {
   WebkitOverflowScrolling: "touch",
   transition: "max-height 180ms ease",
 
-  // ✅ Паддинги разные для collapsed/expanded
-  padding: isDetailsCollapsed ? 0 : 12,
+// ---------- Отступы и раскладка панели ----------
+// ✅ В свернутом режиме делаем панель “строкой”, чтобы кнопка была справа
+display: isDetailsCollapsed ? "flex" : "block",
+alignItems: isDetailsCollapsed ? "center" : "stretch",
+justifyContent: isDetailsCollapsed ? "flex-end" : "flex-start",
 
-  // ✅ Safe-area снизу (чтобы не лезло под системную панель)
-  paddingBottom: isDetailsCollapsed
-    ? `calc(env(safe-area-inset-bottom))`
-    : `calc(12px + env(safe-area-inset-bottom))`,
+// ✅ В свернутом режиме небольшой паддинг, чтобы кнопка не прилипала к краю
+padding: isDetailsCollapsed ? "8px 12px" : 12,
+
+// ✅ Safe-area снизу
+paddingBottom: isDetailsCollapsed
+  ? `calc(8px + env(safe-area-inset-bottom))`
+  : `calc(12px + env(safe-area-inset-bottom))`,
+
 }}
 
       >
@@ -1112,22 +1119,21 @@ function App() {
           <button
             onClick={() => setIsDetailsCollapsed((v) => !v)}
             style={{
-  // ---------- Кнопка сворачивания/разворачивания ----------
-  // ✅ В свернутом режиме кнопка ВСЕГДА внутри панели (не обрезается)
-  // ✅ В развернутом — как “ручка” над панелью
+  // ---------- Кнопка свернуть/развернуть панель ----------
+  // ✅ Свернуто: кнопка справа внутри панели (не режется)
+  // ✅ Развернуто: кнопка тоже справа, но фиксируем в правом верхнем углу панели
   position: isDetailsCollapsed ? "relative" : "absolute",
 
-  top: isDetailsCollapsed ? 0 : -16,
-  left: isDetailsCollapsed ? "50%" : "50%",
+  // ✅ Развернуто: справа сверху внутри панели
+  top: isDetailsCollapsed ? 0 : 10,
+  right: isDetailsCollapsed ? 0 : 12,
 
-  transform: isDetailsCollapsed
-    ? "translateX(-50%)"
-    : "translateX(-50%)",
+  // ✅ Отключаем центрирование по X (оно больше не нужно)
+  left: "auto",
+  transform: "none",
 
   height: 34,
   width: 74,
-  margin: isDetailsCollapsed ? "13px auto 13px" : 0, // ✅ центрируем в collapsed
-
   borderRadius: 999,
   border: "1px solid rgba(255,255,255,0.16)",
   background: "rgba(21,21,23,0.96)",
@@ -1152,9 +1158,8 @@ function App() {
           </button>
 
          {isDetailsCollapsed ? null : (
-            <div style={{ display: "grid", gap: 10, paddingTop: 54 
-              // место под кнопку (она на top:10 и высота 34)
-             }}>
+            <div style={{ display: "grid", gap: 10, paddingTop: 6 }}>
+
               <div style={{ fontWeight: 900 }}>Node</div>
 
               <input
