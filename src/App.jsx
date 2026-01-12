@@ -854,20 +854,28 @@ function App() {
       </div>
 
       {/* Canvas (NO paddingBottom — чтобы не было пустой зоны и “серого” места) */}
-      <div
-  style={{
-    flex: 1,
-    background: "#0F0F10",
-    touchAction: "none",
-    position: "relative",
-    // место под нижнюю панель ТОЛЬКО когда выбрана нода
-    // + чуть больше места, чтобы кнопка не пряталась
-    paddingBottom: selectedNode ? (isDetailsCollapsed ? 96 : 420) : 0,
-    boxSizing: "border-box",
-  }}
->
+            <div
+        style={{
+          flex: 1,
+          background: "#0F0F10",
+          touchAction: "none",
+          position: "relative",
 
+          // РЕЗЕРВ МЕСТА ПОД НИЖНЮЮ ПАНЕЛЬ (без лишнего воздуха)
+          // Если нода не выбрана — резерв 0
+          paddingBottom: selectedNode
+            ? isDetailsCollapsed
+              // Свернуто: ровно высота панели 62px + safe-area
+              ? `calc(62px + env(safe-area-inset-bottom))`
+              // Развернуто: ровно 46dvh + safe-area
+              : `calc(46dvh + env(safe-area-inset-bottom))`
+            : 0,
+
+          boxSizing: "border-box",
+        }}
+      >
         {/* Hidden input */}
+
         <input
           ref={fileInputRef}
           type="file"
@@ -1063,83 +1071,87 @@ function App() {
         </ReactFlow>
       </div>
 
-      {/* Bottom sheet (оверлей, не влияет на размер ReactFlow) */}
+            {/* Bottom sheet (нижняя панель редактирования ноды) */}
       {selectedNode ? (
         <div
-  style={{
-    padding: 12,
-    borderTop: `1px solid ${theme.border}`,
-    fontFamily: "Arial, sans-serif",
-    background: "#111111",
-    color: "#FFFFFF",
+          style={{
+            padding: 12,
+            borderTop: `1px solid ${theme.border}`,
+            fontFamily: "Arial, sans-serif",
+            background: "#111111",
+            color: "#FFFFFF",
 
-    position: "fixed",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 120,
+            // Панель поверх (fixed), чтобы не ломать размеры ReactFlow
+            position: "fixed",
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 120,
 
-    // ВАЖНО: чтобы абсолютная кнопка позиционировалась относительно панели
-    position: "fixed",
-    // добавь:
-    overflowX: "visible",
-    // и добавь:
-    paddingBottom: "calc(12px + env(safe-area-inset-bottom))",
+            // Safe-area снизу (Android/Telegram иногда “съедает” низ)
+            paddingBottom: `calc(12px + env(safe-area-inset-bottom))`,
 
-    maxHeight: isDetailsCollapsed ? 56 : "46dvh",
-    overflowY: isDetailsCollapsed ? "hidden" : "auto",
-    WebkitOverflowScrolling: "touch",
-    transition: "max-height 180ms ease",
-  }}
->
+            // Высота панели — строго по режиму (совпадает с paddingBottom Canvas)
+            maxHeight: isDetailsCollapsed ? 62 : "46dvh",
+            overflowY: isDetailsCollapsed ? "hidden" : "auto",
+            WebkitOverflowScrolling: "touch",
+            transition: "max-height 180ms ease",
 
-          {/* toggle button */}
+            // Чтобы кнопка по центру не “прыгала” и не было воздуха сверху
+            // (важно: оставляем место только под кнопку)
+            paddingTop: isDetailsCollapsed ? 12 : 12,
+          }}
+        >
+          {/* КНОПКА-СВИЧ (свернуть/развернуть панель) */}
           <button
             onClick={() => setIsDetailsCollapsed((v) => !v)}
             style={{
-  position: "absolute",
-  // делаем “ручку” чуть ВЫШЕ панели, чтобы ее было видно всегда
-  top: -16,
-  left: "50%",
-  transform: "translateX(-50%)",
-  height: 34,
-  width: 74,
-  borderRadius: 999,
-  border: "1px solid rgba(255,255,255,0.16)",
-  background: "rgba(21,21,23,0.96)",
-  color: "rgba(255,255,255,0.9)",
-  fontWeight: 900,
-  cursor: "pointer",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  zIndex: 9999,
-  boxShadow: "0 8px 22px rgba(0,0,0,0.45)",
-}}
+              // Делаем кнопку визуально “на стыке” и по центру свернутой панели
+              position: "absolute",
+              left: "50%",
+              top: isDetailsCollapsed ? "50%" : 10,
+              transform: isDetailsCollapsed ? "translate(-50%, -50%)" : "translateX(-50%)",
 
-            aria-label={isDetailsCollapsed ? "Expand panel" : "Collapse panel"}
-            title={isDetailsCollapsed ? "Expand" : "Collapse"}
+              height: 34,
+              width: 74,
+              borderRadius: 14,
+              border: "1px solid rgba(255,255,255,0.14)",
+              background: "rgba(21,21,23,0.92)",
+              color: "rgba(255,255,255,0.90)",
+              fontWeight: 900,
+              cursor: "pointer",
+
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 30,
+            }}
+            aria-label={isDetailsCollapsed ? "Развернуть панель" : "Свернуть панель"}
+            title={isDetailsCollapsed ? "Развернуть" : "Свернуть"}
           >
             {isDetailsCollapsed ? "▴" : "▾"}
           </button>
 
+          {/* КОНТЕНТ ПАНЕЛИ */}
           {isDetailsCollapsed ? null : (
-            <div style={{ display: "grid", gap: 10, paddingTop: 26 }}>
-              <div style={{ fontWeight: 900 }}>Node</div>
+            <div
+              style={{
+                display: "grid",
+                gap: 10,
 
-              <input
-                value={selectedNode.data?.title || ""}
-                onChange={(e) => updateSelectedNode({ title: e.target.value })}
-                placeholder="Title"
-                style={{
-                  padding: 10,
-                  borderRadius: 10,
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  outline: "none",
-                  background: "#FFFFFF",
-                  color: "#111111",
-                }}
-              />
+                // ВАЖНО: вот тут мы даём место сверху под кнопку в развернутом режиме,
+                // чтобы контент не залезал под неё
+                paddingTop: 26,
+              }}
+            >
+              {/* Дальше оставь ТВОЙ текущий контент как есть:
+                  - заголовок "Node"
+                  - input title
+                  - textarea notes
+                  - кнопки idea/active/done
+                  - блок Images и т.д.
+              */}
+
 
               {/* Notes */}
               <div style={{ position: "relative" }}>
