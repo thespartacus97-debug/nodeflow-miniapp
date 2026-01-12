@@ -864,12 +864,12 @@ function App() {
           // РЕЗЕРВ МЕСТА ПОД НИЖНЮЮ ПАНЕЛЬ (без лишнего воздуха)
           // Если нода не выбрана — резерв 0
           paddingBottom: selectedNode
-            ? isDetailsCollapsed
-              // Свернуто: ровно высота панели 62px + safe-area
-              ? `calc(62px + env(safe-area-inset-bottom))`
-              // Развернуто: ровно 46dvh + safe-area
-              : `calc(46dvh + env(safe-area-inset-bottom))`
-            : 0,
+  ? (isDetailsCollapsed
+      ? `calc(60px + env(safe-area-inset-bottom))`   // ✅ ровно под свернутую панель
+      : `calc(46dvh + env(safe-area-inset-bottom))` // ✅ ровно под развернутую панель
+    )
+  : `env(safe-area-inset-bottom)`,
+
 
           boxSizing: "border-box",
         }}
@@ -1075,55 +1075,74 @@ function App() {
             {selectedNode ? (
       <div
         style={{
-        padding: 12,
-        borderTop: `1px solid ${theme.border}`,
-        fontFamily: "Arial, sans-serif",
-        background: "#111111",
-        color: "#FFFFFF",
-        position: "fixed",
-        left: 0,
-        right: 0,
-        bottom: 10,// ⬆️ поднимаем всю нижнюю панель на 10px
-        zIndex: 120,
+  // ---------- Нижняя панель (оверлей) ----------
+  borderTop: `1px solid ${theme.border}`,
+  fontFamily: "Arial, sans-serif",
+  background: "#111111",
+  color: "#FFFFFF",
 
-        paddingBottom: `calc(12px + env(safe-area-inset-bottom))`,
-        maxHeight: isDetailsCollapsed ? 62 : "46dvh",
-        overflowY: isDetailsCollapsed ? "hidden" : "auto",
-        WebkitOverflowScrolling: "touch",
-        transition: "max-height 180ms ease",
-      }}
+  position: "fixed",
+  left: 0,
+  right: 0,
+  bottom: 0, // панель всегда прижата к низу
+
+  zIndex: 120,
+
+  // ✅ Важно: чтобы кнопка/ручка не резалась
+  overflow: "visible",
+
+  // ✅ В collapsed делаем панель маленькой: только под кнопку
+  // ✅ В expanded оставляем твой размер
+  maxHeight: isDetailsCollapsed ? 60 : "46dvh",
+  overflowY: isDetailsCollapsed ? "hidden" : "auto",
+  WebkitOverflowScrolling: "touch",
+  transition: "max-height 180ms ease",
+
+  // ✅ Паддинги разные для collapsed/expanded
+  padding: isDetailsCollapsed ? 0 : 12,
+
+  // ✅ Safe-area снизу (чтобы не лезло под системную панель)
+  paddingBottom: isDetailsCollapsed
+    ? `calc(env(safe-area-inset-bottom))`
+    : `calc(12px + env(safe-area-inset-bottom))`,
+}}
+
       >
         {/* toggle button (only when node selected) */}
           <button
             onClick={() => setIsDetailsCollapsed((v) => !v)}
             style={{
-  position: "absolute",
+  // ---------- Кнопка сворачивания/разворачивания ----------
+  // ✅ В свернутом режиме кнопка ВСЕГДА внутри панели (не обрезается)
+  // ✅ В развернутом — как “ручка” над панелью
+  position: isDetailsCollapsed ? "relative" : "absolute",
 
-  // РУЧКА/КНОПКА: в свернутом режиме строго по центру панели,
-  // в развернутом — сверху внутри панели (без выезда наружу)
-  top: isDetailsCollapsed ? "50%" : 10,
-  left: "50%",
- transform: isDetailsCollapsed
-  ? "translate(-50%, calc(-50% - 4px))" // ⬆️ поднимаем кнопку на 4px
-  : "translateX(-50%)",
+  top: isDetailsCollapsed ? 0 : -16,
+  left: isDetailsCollapsed ? "50%" : "50%",
+
+  transform: isDetailsCollapsed
+    ? "translateX(-50%)"
+    : "translateX(-50%)",
 
   height: 34,
   width: 74,
+  margin: isDetailsCollapsed ? "13px auto 13px" : 0, // ✅ центрируем в collapsed
+
   borderRadius: 999,
   border: "1px solid rgba(255,255,255,0.16)",
   background: "rgba(21,21,23,0.96)",
   color: "rgba(255,255,255,0.9)",
   fontWeight: 900,
   cursor: "pointer",
+
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
 
-  // ВАЖНО: не ставим 9999, чтобы не было странных наложений в Telegram WebView
-  zIndex: 200,
-
+  zIndex: 9999,
   boxShadow: "0 8px 22px rgba(0,0,0,0.45)",
 }}
+
 
 
             aria-label={isDetailsCollapsed ? "Expand panel" : "Collapse panel"}
