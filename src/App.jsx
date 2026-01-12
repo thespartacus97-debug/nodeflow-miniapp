@@ -1125,7 +1125,7 @@ paddingBottom: isDetailsCollapsed
   position: isDetailsCollapsed ? "relative" : "absolute",
 
   // ✅ Развернуто: справа сверху внутри панели
-  top: isDetailsCollapsed ? 0 : 10,
+  top: isDetailsCollapsed ? 0 : 6,
   right: isDetailsCollapsed ? 0 : 12,
 
   // ✅ Отключаем центрирование по X (оно больше не нужно)
