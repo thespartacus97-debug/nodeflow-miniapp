@@ -1083,7 +1083,7 @@ function App() {
         position: "fixed",
         left: 0,
         right: 0,
-        bottom: 0,
+        bottom: 10,// ⬆️ поднимаем всю нижнюю панель на 10px
         zIndex: 120,
 
         paddingBottom: `calc(12px + env(safe-area-inset-bottom))`,
@@ -1103,7 +1103,9 @@ function App() {
   // в развернутом — сверху внутри панели (без выезда наружу)
   top: isDetailsCollapsed ? "50%" : 10,
   left: "50%",
-  transform: isDetailsCollapsed ? "translate(-50%, -50%)" : "translateX(-50%)",
+ transform: isDetailsCollapsed
+  ? "translate(-50%, calc(-50% - 4px))" // ⬆️ поднимаем кнопку на 4px
+  : "translateX(-50%)",
 
   height: 34,
   width: 74,
