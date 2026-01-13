@@ -328,7 +328,6 @@ function App() {
   }
 
   /* ---------- 8b. ГРАФ ---------- */
-  const { projectViewport } = useReactFlow();   // для центра экрана
   const gKey = useMemo(() => (currentProject ? graphStorageKey(userId, currentProject.id) : null), [userId, currentProject]);
   const [nodes, setNodes] = useState([]);
   const [edges, setEdges] = useState([]);
@@ -444,11 +443,10 @@ function App() {
 
   /* ---------- 8k. ДОБАВЛЕНИЕ НОДЫ – В ЦЕНТР ЭКРАНА ---------- */
   const addNode = useCallback(() => {
-    const id = crypto.randomUUID();
-    // центр видимого окна
-    const { x, y, zoom } = rfRef.current.getViewport();
-    const centerX = -x + window.innerWidth  / (2 * zoom);
-    const centerY = -y + window.innerHeight / (2 * zoom);
+  const id = crypto.randomUUID();
+  const viewport = rfRef.current.getViewport();
+  const centerX = -viewport.x + window.innerWidth  / (2 * viewport.zoom);
+  const centerY = -viewport.y + window.innerHeight / (2 * viewport.zoom);
 
     const newNode = {
       id,
