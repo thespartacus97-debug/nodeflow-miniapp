@@ -567,29 +567,7 @@ useEffect(() => {
   });
 }, [gKey, nodes.length]);
 
-/* =====================================================================
-   2. КАЖДЫЙ раз при выборе ноды – прыгаем к ней
-   ================================================================== */
-useEffect(() => {
-  if (!selectedNodeId) return;     // нода не выбрана
-  if (!rfRef.current) return;      //ReactFlow не готов
 
-  const node = nodes.find(n => n.id === selectedNodeId);
-  if (!node) return;               // на всякий случай
-
-  // небольшой отступ вокруг ноды, чтобы она не прилипала к краям
-  const padding = 80;
-  const bounds = {
-    x: node.position.x - padding,
-    y: node.position.y - padding,
-    width: 170 + padding * 2,   // 170 ≈ минимальная ширина ноды
-    height: 80 + padding * 2,
-  };
-
-  requestAnimationFrame(() => {
-    rfRef.current?.fitBounds(bounds, { duration: 250, padding: 0.15 });
-  });
-}, [selectedNodeId, nodes]);
 
   // node/edge handlers
   const onNodesChange = useCallback((changes) => {
@@ -1181,6 +1159,49 @@ paddingBottom: isDetailsCollapsed
             title={isDetailsCollapsed ? "Expand" : "Collapse"}
           >
             {isDetailsCollapsed ? "▴" : "▾"}
+          </button>
+
+          {/* ===== Кнопка «найти ноду» (прицел) ===== */}
+          <button
+            onClick={() => {
+              // центрируемся ТОЛЬКО если есть выбранная нода
+              if (!selectedNodeId) return;
+              if (!rfRef.current) return;
+
+              const node = nodes.find(n => n.id === selectedNodeId);
+              if (!node) return;
+
+              const padding = 80;
+              const bounds = {
+                x: node.position.x - padding,
+                y: node.position.y - padding,
+                width: 170 + padding * 2,
+                height: 80 + padding * 2,
+              };
+
+              requestAnimationFrame(() => {
+                rfRef.current?.fitBounds(bounds, { duration: 250, padding: 0.15 });
+              });
+            }}
+            style={{
+              marginLeft: 8,                  // чуть отступ от кнопки свернуть
+              height: 34,
+              width: 34,
+              borderRadius: 999,
+              border: "1px solid rgba(255,255,255,0.16)",
+              background: "rgba(21,21,23,0.96)",
+              color: "rgba(255,255,255,0.9)",
+              fontWeight: 900,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxShadow: "0 8px 22px rgba(0,0,0,0.45)",
+            }}
+            title="Find node"
+            aria-label="Find node"
+          >
+            🎯
           </button>
 
          {isDetailsCollapsed ? null : (
