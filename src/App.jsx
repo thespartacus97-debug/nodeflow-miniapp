@@ -578,10 +578,21 @@ useEffect(() => {
     setEdges((eds) => applyEdgeChanges(changes, eds));
   }, []);
 
+  // ---------- позволяет «оторвать» ребро и прицепить в новое место ----------
+   const onReconnect = useCallback((oldEdge, newConn) => {
+  // newConn = { source, sourceHandle, target, targetHandle }
+  setEdges(eds => {
+    // убираем старое ребро
+    const noOld = eds.filter(e => e.id !== oldEdge.id);
+    // добавляем новое с тем же id (или новым – не важно)
+    return addEdge({ ...oldEdge, ...newConn }, noOld);
+  });
+  }, []);
+
   const onConnect = useCallback((params) => {
     setEdges((eds) => addEdge({ ...params, type: "nf" }, eds));
   }, []);
-
+  
   function addNode() {
     const id = crypto.randomUUID();
     const newNode = {
@@ -777,16 +788,7 @@ useEffect(() => {
   }
 
   // ---------- UI: Canvas ----------
-  // ---------- позволяет «оторвать» ребро и прицепить в новое место ----------
-const onReconnect = useCallback((oldEdge, newConn) => {
-  // newConn = { source, sourceHandle, target, targetHandle }
-  setEdges(eds => {
-    // убираем старое ребро
-    const noOld = eds.filter(e => e.id !== oldEdge.id);
-    // добавляем новое с тем же id (или новым – не важно)
-    return addEdge({ ...oldEdge, ...newConn }, noOld);
-  });
-}, []);
+  
   return (
     <div style={{ height: "100dvh", display: "flex", flexDirection: "column", position: "relative", overflow: "hidden" }}>
       {/* Top bar */}
