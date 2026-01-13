@@ -1122,7 +1122,7 @@ paddingBottom: isDetailsCollapsed
                             {/* ===== Блок кнопок (внутри панели, двигается вместе с ней) ===== */}
           <div
             style={{
-              marginLeft: "auto",        // прижать блок к правому краю
+             marginRight: "auto",       // ← ПРИЖИМАЕМ К ЛЕВОМУ КРАЮ
               display: "flex",
               gap: 8,                    // 8 px между кнопками
               alignItems: "center",
