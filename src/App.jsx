@@ -554,16 +554,42 @@ function App() {
   }, [gKey, nodes, edges, scheduleSave]);
 
   // fit view once per project
-  useEffect(() => {
-    if (!gKey) return;
-    if (didFitRef.current) return;
-    if (!rfRef.current) return;
+  /* =====================================================================
+   1. При первом открытии проекта показываем весь граф (один раз)
+   ================================================================== */
+useEffect(() => {
+  if (!gKey) return;               // проект ещё не выбран
+  if (didFitRef.current) return;   // уже показали
+  if (!rfRef.current) return;      // ReactFlow ещё не готов
+  requestAnimationFrame(() => {
+    rfRef.current?.fitView({ padding: 0.25, duration: 0 });
+    didFitRef.current = true;      // больше не будем
+  });
+}, [gKey, nodes.length]);
 
-    requestAnimationFrame(() => {
-      rfRef.current?.fitView({ padding: 0.25, duration: 0 });
-      didFitRef.current = true;
-    });
-  }, [gKey, nodes.length]);
+/* =====================================================================
+   2. КАЖДЫЙ раз при выборе ноды – прыгаем к ней
+   ================================================================== */
+useEffect(() => {
+  if (!selectedNodeId) return;     // нода не выбрана
+  if (!rfRef.current) return;      //ReactFlow не готов
+
+  const node = nodes.find(n => n.id === selectedNodeId);
+  if (!node) return;               // на всякий случай
+
+  // небольшой отступ вокруг ноды, чтобы она не прилипала к краям
+  const padding = 80;
+  const bounds = {
+    x: node.position.x - padding,
+    y: node.position.y - padding,
+    width: 170 + padding * 2,   // 170 ≈ минимальная ширина ноды
+    height: 80 + padding * 2,
+  };
+
+  requestAnimationFrame(() => {
+    rfRef.current?.fitBounds(bounds, { duration: 250, padding: 0.15 });
+  });
+}, [selectedNodeId, nodes]);
 
   // node/edge handlers
   const onNodesChange = useCallback((changes) => {
@@ -860,7 +886,7 @@ function App() {
           background: "#0F0F10",
           touchAction: "none",
           position: "relative",
-
+          boxSizing:"border-box",        // <-- добавьте
           // РЕЗЕРВ МЕСТА ПОД НИЖНЮЮ ПАНЕЛЬ (без лишнего воздуха)
           // Если нода не выбрана — резерв 0
           paddingBottom: selectedNode
@@ -871,7 +897,7 @@ function App() {
   : `env(safe-area-inset-bottom)`,
 
 
-          boxSizing: "border-box",
+        
         }}
       >
         {/* Hidden input */}
