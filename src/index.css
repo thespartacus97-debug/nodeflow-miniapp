@@ -33,3 +33,10 @@ body {
 .react-flow__controls-button:hover {
   background: rgba(111, 66, 255, 0.18) !important;
 }
+
+/* Pinch-to-zoom контейнер – запрещаем выделение, чтобы не дергался скролл */
+.zoom-img {
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;   /* отключаем скролл при пальце на IMG */
+}
