@@ -578,20 +578,19 @@ useEffect(() => {
     setEdges((eds) => applyEdgeChanges(changes, eds));
   }, []);
 
-  // ---------- позволяет «оторвать» ребро и прицепить в новое место ----------
-   const onReconnect = useCallback((oldEdge, newConn) => {
-  // newConn = { source, sourceHandle, target, targetHandle }
-  setEdges(eds => {
-    // убираем старое ребро
-    const noOld = eds.filter(e => e.id !== oldEdge.id);
-    // добавляем новое с тем же id (или новым – не важно)
-    return addEdge({ ...oldEdge, ...newConn }, noOld);
-  });
-  }, []);
+
 
   const onConnect = useCallback((params) => {
     setEdges((eds) => addEdge({ ...params, type: "nf" }, eds));
   }, []);
+
+  // отрыв и переподключение линии
+const onReconnect = useCallback((oldEdge, newConnection) => {
+  setEdges(eds => {
+    const filtered = eds.filter(e => e.id !== oldEdge.id);
+    return addEdge({ ...oldEdge, ...newConnection }, filtered);
+  });
+}, []);
   
   function addNode() {
     const id = crypto.randomUUID();
@@ -788,7 +787,7 @@ useEffect(() => {
   }
 
   // ---------- UI: Canvas ----------
-  
+
   return (
     <div style={{ height: "100dvh", display: "flex", flexDirection: "column", position: "relative", overflow: "hidden" }}>
       {/* Top bar */}
@@ -1039,52 +1038,38 @@ useEffect(() => {
         )}
 
         <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          nodeTypes={nodeTypes}
-          edgeTypes={edgeTypes}
-          defaultEdgeOptions={{ type: "nf" }}
-          preventScrolling={true}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onInit={(instance) => {
-            rfRef.current = instance;
-            didFitRef.current = false;
-          }}
-          onConnect={onConnect}
-          onNodeClick={(_, node) => {
-            setSelectedNodeId(node.id);
-            setSelectedEdgeId(null);
-            setIsDetailsCollapsed(false);
-          }}
-          onPaneClick={() => {
-            setSelectedNodeId(null);
-            setSelectedEdgeId(null);
-          }}
-          onEdgeClick={(_, edge) => {
-            if (!linkMode) return;
-            setSelectedEdgeId(edge.id);
-            setSelectedNodeId(null);
-          }}
-          minZoom={0.15}
-          maxZoom={2}
-          zoomOnPinch={true}
-          zoomOnDoubleClick={false}
-          panOnDrag={true}
-          zoomOnScroll={!linkMode}
-          panOnScroll={!linkMode}
-          nodesConnectable={linkMode}
-          nodesDraggable={!linkMode}
-          connectionRadius={34}      // = диаметр хэндла, иначе цепляет «за угол»
-          connectionMode={ConnectionMode.Loose}
-          isValidConnection={(c) => c.source !== c.target}
-          deleteKeyCode={null}
-          multiSelectionKeyCode={null}
-          selectionKeyCode={null}
-          style={{ background: "#0F0F10", width: "100%", height: "100%" }}
-            onEdgeUpdate={onReconnect}          // ← новое
-            onReconnectEdge={onReconnect}       // ← новое
-        >
+  nodes={nodes}
+  edges={edges}
+  nodeTypes={nodeTypes}
+  edgeTypes={edgeTypes}
+  defaultEdgeOptions={{ type: "nf" }}
+  preventScrolling={true}
+  onNodesChange={onNodesChange}
+  onEdgesChange={onEdgesChange}
+  onInit={(instance) => {
+    rfRef.current = instance;
+    didFitRef.current = false;
+  }}
+  onConnect={onConnect}
+  onEdgeUpdate={onReconnect}      // ← новое
+  onReconnectEdge={onReconnect}   // ← новое
+  minZoom={0.15}
+  maxZoom={2}
+  zoomOnPinch={true}
+  zoomOnDoubleClick={false}
+  panOnDrag={true}
+  zoomOnScroll={!linkMode}
+  panOnScroll={!linkMode}
+  nodesConnectable={linkMode}
+  nodesDraggable={!linkMode}
+  connectionRadius={18}           // ← новое (уже поменяли в п.1)
+  connectionMode={ConnectionMode.Loose}
+  isValidConnection={(c) => c.source !== c.target}
+  deleteKeyCode={null}
+  multiSelectionKeyCode={null}
+  selectionKeyCode={null}
+  style={{ background: "#0F0F10", width: "100%", height: "100%" }}
+>
 
           <Background />
         </ReactFlow>
