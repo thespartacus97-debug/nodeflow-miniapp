@@ -1119,23 +1119,23 @@ paddingBottom: isDetailsCollapsed
 }}
 
       >
-                            {/* ===== Блок кнопок (внутри панели, двигается вместе с ней) ===== */}
+        {/* ===== Правый flex-ряд кнопок (всегда справа) ===== */}
           <div
             style={{
-              marginLeft: "auto",    // ← ПРИЖИМАЕМ К ПРАВОМУ КРАЮ
+              width: "100%",        // растягиваемся на всю ширину панели
               display: "flex",
-              gap: 8,                    // 8 px между кнопками
+              justifyContent: "flex-end", // ➜ содержимое уходит вправо
               alignItems: "center",
+              gap: 8,               // 8 px между кнопками
             }}
           >
-            {/* 🎯 ПРИЦЕЛ (всегда чуть левее) */}
+            {/* 🎯 ПРИЦЕЛ (левая из двух) */}
             <button
               onClick={() => {
                 if (!selectedNodeId) return;
                 if (!rfRef.current) return;
                 const node = nodes.find(n => n.id === selectedNodeId);
                 if (!node) return;
-
                 const padding = 80;
                 const bounds = {
                   x: node.position.x - padding,
@@ -1167,7 +1167,7 @@ paddingBottom: isDetailsCollapsed
               🎯
             </button>
 
-            {/* ▾/▴ СВЕРНУТЬ / РАЗВЕРНУТЬ */}
+            {/* ▾/▴ СВЕРНУТЬ / РАЗВЕРНУТЬ (правая) */}
             <button
               onClick={() => setIsDetailsCollapsed(v => !v)}
               style={{
