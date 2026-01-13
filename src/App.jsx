@@ -1119,90 +1119,80 @@ paddingBottom: isDetailsCollapsed
 }}
 
       >
-        {/* toggle button (only when node selected) */}
-          <button
-            onClick={() => setIsDetailsCollapsed((v) => !v)}
+                  {/* ===== Контейнер для нижних кнопок (прицел + свернуть) ===== */}
+          <div
             style={{
-  // ---------- Кнопка свернуть/развернуть панель ----------
-  // ✅ Свернуто: кнопка справа внутри панели (не режется)
-  // ✅ Развернуто: кнопка тоже справа, но фиксируем в правом верхнем углу панели
-  position: isDetailsCollapsed ? "relative" : "absolute",
-
-  // ✅ Развернуто: справа сверху внутри панели
-  top: isDetailsCollapsed ? 0 : 6,
-  right: isDetailsCollapsed ? 0 : 12,
-
-  // ✅ Отключаем центрирование по X (оно больше не нужно)
-  left: "auto",
-  transform: "none",
-
-  height: 34,
-  width: 74,
-  borderRadius: 999,
-  border: "1px solid rgba(255,255,255,0.16)",
-  background: "rgba(21,21,23,0.96)",
-  color: "rgba(255,255,255,0.9)",
-  fontWeight: 900,
-  cursor: "pointer",
-
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-
-  zIndex: 9999,
-  boxShadow: "0 8px 22px rgba(0,0,0,0.45)",
-}}
-
-
-
-            aria-label={isDetailsCollapsed ? "Expand panel" : "Collapse panel"}
-            title={isDetailsCollapsed ? "Expand" : "Collapse"}
-          >
-            {isDetailsCollapsed ? "▴" : "▾"}
-          </button>
-
-          {/* ===== Кнопка «найти ноду» (прицел) ===== */}
-          <button
-            onClick={() => {
-              // центрируемся ТОЛЬКО если есть выбранная нода
-              if (!selectedNodeId) return;
-              if (!rfRef.current) return;
-
-              const node = nodes.find(n => n.id === selectedNodeId);
-              if (!node) return;
-
-              const padding = 80;
-              const bounds = {
-                x: node.position.x - padding,
-                y: node.position.y - padding,
-                width: 170 + padding * 2,
-                height: 80 + padding * 2,
-              };
-
-              requestAnimationFrame(() => {
-                rfRef.current?.fitBounds(bounds, { duration: 250, padding: 0.15 });
-              });
-            }}
-            style={{
-              marginLeft: 8,                  // чуть отступ от кнопки свернуть
-              height: 34,
-              width: 34,
-              borderRadius: 999,
-              border: "1px solid rgba(255,255,255,0.16)",
-              background: "rgba(21,21,23,0.96)",
-              color: "rgba(255,255,255,0.9)",
-              fontWeight: 900,
-              cursor: "pointer",
+              position: "absolute",
+              right: 12,          // фиксированное расстояние от правого края панели
+              bottom: 6,          // фиксированное расстояние от нижнего края
               display: "flex",
+              gap: 8,             // 8 px между кнопками
               alignItems: "center",
-              justifyContent: "center",
-              boxShadow: "0 8px 22px rgba(0,0,0,0.45)",
             }}
-            title="Find node"
-            aria-label="Find node"
           >
-            🎯
-          </button>
+            {/* 🎯 ПРИЦЕЛ (всегда видна, чуть левее) */}
+            <button
+              onClick={() => {
+                if (!selectedNodeId) return;
+                if (!rfRef.current) return;
+                const node = nodes.find(n => n.id === selectedNodeId);
+                if (!node) return;
+
+                const padding = 80;
+                const bounds = {
+                  x: node.position.x - padding,
+                  y: node.position.y - padding,
+                  width: 170 + padding * 2,
+                  height: 80 + padding * 2,
+                };
+                requestAnimationFrame(() => {
+                  rfRef.current?.fitBounds(bounds, { duration: 250, padding: 0.15 });
+                });
+              }}
+              style={{
+                width: 34,
+                height: 34,
+                borderRadius: 999,
+                border: "1px solid rgba(255,255,255,0.16)",
+                background: "rgba(21,21,23,0.96)",
+                color: "rgba(255,255,255,0.9)",
+                fontWeight: 900,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                boxShadow: "0 8px 22px rgba(0,0,0,0.45)",
+              }}
+              title="Find node"
+              aria-label="Find node"
+            >
+              🎯
+            </button>
+
+            {/* ▾/▴ СВЕРНУТЬ / РАЗВЕРНУТЬ */}
+            <button
+              onClick={() => setIsDetailsCollapsed(v => !v)}
+              style={{
+                width: 74,
+                height: 34,
+                borderRadius: 999,
+                border: "1px solid rgba(255,255,255,0.16)",
+                background: "rgba(21,21,23,0.96)",
+                color: "rgba(255,255,255,0.9)",
+                fontWeight: 900,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                boxShadow: "0 8px 22px rgba(0,0,0,0.45)",
+              }}
+              aria-label={isDetailsCollapsed ? "Expand panel" : "Collapse panel"}
+              title={isDetailsCollapsed ? "Expand" : "Collapse"}
+            >
+              {isDetailsCollapsed ? "▴" : "▾"}
+            </button>
+          </div>
+          {/* ===== конец контейнера кнопок ===== */}
 
          {isDetailsCollapsed ? null : (
             <div style={{ display: "grid", gap: 10, paddingTop: 6 }}>
