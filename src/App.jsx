@@ -777,6 +777,16 @@ useEffect(() => {
   }
 
   // ---------- UI: Canvas ----------
+  // ---------- позволяет «оторвать» ребро и прицепить в новое место ----------
+const onReconnect = useCallback((oldEdge, newConn) => {
+  // newConn = { source, sourceHandle, target, targetHandle }
+  setEdges(eds => {
+    // убираем старое ребро
+    const noOld = eds.filter(e => e.id !== oldEdge.id);
+    // добавляем новое с тем же id (или новым – не важно)
+    return addEdge({ ...oldEdge, ...newConn }, noOld);
+  });
+}, []);
   return (
     <div style={{ height: "100dvh", display: "flex", flexDirection: "column", position: "relative", overflow: "hidden" }}>
       {/* Top bar */}
@@ -1063,14 +1073,17 @@ useEffect(() => {
           panOnScroll={!linkMode}
           nodesConnectable={linkMode}
           nodesDraggable={!linkMode}
-          connectionRadius={90}
+          connectionRadius={34}      // = диаметр хэндла, иначе цепляет «за угол»
           connectionMode={ConnectionMode.Loose}
           isValidConnection={(c) => c.source !== c.target}
           deleteKeyCode={null}
           multiSelectionKeyCode={null}
           selectionKeyCode={null}
           style={{ background: "#0F0F10", width: "100%", height: "100%" }}
+            onEdgeUpdate={onReconnect}          // ← новое
+            onReconnectEdge={onReconnect}       // ← новое
         >
+
           <Background />
         </ReactFlow>
       </div>
